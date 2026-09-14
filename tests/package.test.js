@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const run=(cmd,args,cwd)=>{const env={...process.env,npm_config_cache:path.join(os.tmpdir(),'if-package-test-cache')};delete env.NODE_TEST_CONTEXT;return execFileSync(cmd,args,{cwd,encoding:'utf8',env});};
+
+test('release archives install into an independent project, preserve saves and build offline',async t=>{
+    const temp=await fs.mkdtemp(path.join(os.tmpdir(),'if-package-test-'));
+    t.after(()=>fs.rm(temp,{recursive:true,force:true}));
+    const artifacts=path.join(temp,'release');await fs.mkdir(artifacts);
+    run(process.execPath,[path.join(root,'scripts/pack-release.js'),artifacts],root);
+    const game=path.join(temp,'game');await fs.cp(path.join(root,'examples/study'),game,{recursive:true,filter:p=>!p.includes('node_modules')&&!p.includes('/dist')});
+    const pkg=JSON.parse(await fs.readFile(path.join(game,'package.json')));
+    for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-1.0.0.tgz`;
+    await fs.writeFile(path.join(game,'package.json'),JSON.stringify(pkg));
+    run('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund'],game);
+    run('npm',['test'],game);
+    run('npm',['run','build'],game);
+    const first=await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8');
+    run('npm',['run','build'],game);
+    assert.equal(await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8'),first,'Unchanged builds have the same cache identity');
+    const built=JSON.parse(await fs.readFile(path.join(game,'dist/build-info.json')));
+    assert.equal(built.engine,'1.0.0');assert.equal(built.browser,'1.0.0');
+    const source=await fs.readFile(path.join(game,'dist/index.html'),'utf8');
+    assert.ok(source.includes('type="importmap"'));assert.ok(source.includes('A Quiet Study'));
+    assert.ok(first.includes('./assets/study.svg'));assert.ok(first.includes('./vendor/engine/src/serialization.js'));
+    assert.ok(!first.includes('__ASSETS__'));
+    await fs.appendFile(path.join(game,'assets/study.svg'),'\n');run('npm',['run','build'],game);
+    assert.notEqual(await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8'),first,'Assets invalidate the release cache');
+    const {buildGame}=await import(pathToFileURL(path.join(game,'node_modules/@paulbowler/if-browser/build.js')));
+    const config=JSON.parse(await fs.readFile(path.join(game,'if.config.json')));
+    await fs.writeFile(path.join(game,'if.config.json'),JSON.stringify({...config,outDir:'src'}));
+    await assert.rejects(buildGame({cwd:game}),/separate child/);
+    await fs.writeFile(path.join(game,'if.config.json'),JSON.stringify(config));
+    await fs.symlink(path.join(game,'package.json'),path.join(game,'assets/escape.json'));
+    await assert.rejects(buildGame({cwd:game}),/symlink/);
+    assert.ok(await fs.stat(path.join(game,'dist/index.html')),'A failed build preserves the previous deployment');
+    // A second, clean install comes only from the committed dependency lock.
+    await fs.rm(path.join(game,'node_modules'),{recursive:true});
+    run('npm',['ci','--offline','--ignore-scripts','--no-audit','--no-fund'],game);
+    run('npm',['test'],game);
+});

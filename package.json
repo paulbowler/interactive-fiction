@@ -1,0 +1,21 @@
+{
+  "name": "interactive-fiction-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "pack:release": "node scripts/pack-release.js",
+    "check": "npm test && npm run pack:release",
+    "test:browser": "node scripts/test-browser.js"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

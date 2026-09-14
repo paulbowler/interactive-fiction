@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{title}}</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="theme-color" content="#101722">
+    <meta name="application-name" content="{{title}}">
+    <meta name="apple-mobile-web-app-title" content="{{title}}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <p id="game-status" role="status" hidden></p>
+    <div id="game-container">
+        <div id="game">
+            <section id="start-screen" class="story-screen" hidden>
+                <img id="start-screen-image" class="story-screen-image" src="" alt="" decoding="async" />
+                <div class="story-screen-content">
+                    <p id="start-screen-kicker" class="story-screen-kicker"></p>
+                    <h1 id="start-screen-title" class="story-screen-title"></h1>
+                    <div id="start-screen-text" class="story-screen-text"></div>
+                    <div id="start-loading" class="start-loading" hidden>
+                        <div class="start-loading-bar" aria-hidden="true">
+                            <span id="start-loading-bar-fill"></span>
+                        </div>
+                        <p id="start-loading-status" class="start-loading-status">Preparing images...</p>
+                    </div>
+                    <button id="start-game-button" class="primary-action-button" type="button">Start</button>
+                    <p class="release-version">{{release}}</p>
+                </div>
+            </section>
+
+            <section id="end-screen" class="story-screen" hidden>
+                <img id="end-screen-image" class="story-screen-image" src="" alt="" decoding="async" />
+                <div class="story-screen-content">
+                    <p id="end-screen-kicker" class="story-screen-kicker">The End</p>
+                    <h1 id="end-screen-title" class="story-screen-title"></h1>
+                    <div id="end-screen-text" class="story-screen-text"></div>
+                    <div id="end-screen-results" class="story-screen-results">
+                        <p id="end-screen-time" hidden></p>
+                        <p id="end-screen-achievement-count"></p>
+                        <ul id="end-screen-achievements"></ul>
+                    </div>
+                    <button id="end-restart-button" class="primary-action-button" type="button">Restart Game</button>
+                </div>
+            </section>
+
+            <div id="play-screen">
+                <div id="room-header">
+                    <div id="game-title">{{title}}</div>
+                    <h1 id="room-name"></h1>
+                    <div id="clock-controls" hidden>
+                        <time id="game-clock" aria-label="Elapsed time: 0 minutes elapsed">00:00</time>
+                        <button id="wait-button" type="button" title="Wait one minute" aria-label="Wait one minute">Zzz</button>
+                    </div>
+                    <div id="game-menu" class="game-menu">
+                        <button id="game-menu-button" class="game-menu-button" type="button" aria-expanded="false" aria-controls="game-menu-panel" aria-label="Game menu">
+                            <span aria-hidden="true"></span>
+                            <span aria-hidden="true"></span>
+                            <span aria-hidden="true"></span>
+                        </button>
+                        <div id="game-menu-panel" class="game-menu-panel" aria-hidden="true">
+                            <button id="view-achievements-button" type="button">Achievements</button>
+                            <button type="button" data-save-slots>Save / Restore</button>
+                            <button id="restart-game-button" type="button">Restart Game</button>
+                            <p class="release-version">{{release}}</p>
+                        </div>
+                    </div>
+                </div>
+                <img id="room-image" src="" alt="Room Image" decoding="async" />
+                <div id="room-content">
+                    <div id="room-description"></div>
+                    <section id="ending-encounter" hidden aria-live="polite">
+                        <div id="ending-encounter-text" class="npc-proximity-cue"></div>
+                        <button id="ending-encounter-continue" class="primary-action-button" type="button">Continue</button>
+                    </section>
+                    <div id="interactions">
+                        <ul id="exits" class="interaction-list"></ul>
+                        <ul id="items" class="interaction-list"></ul>
+                        <ul id="npc-cues" class="interaction-list npc-cues" aria-live="polite" aria-atomic="true"></ul>
+                    </div>
+                </div>
+                <div id="player-gear" class="player-gear-drawer">
+                    <button id="player-gear-toggle" class="player-gear-toggle" type="button" aria-expanded="false" aria-controls="player-gear-panel">
+                        <span id="player-gear-label">You</span>
+                        <span class="player-gear-toggle-icon" aria-hidden="true"></span>
+                    </button>
+                    <div id="player-gear-panel" class="player-gear-panel" aria-hidden="true">
+                        <ul id="player-gear-items" class="player-gear-items">
+                            <!-- Player-carried and worn items here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="itemModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="item-title">
+            <div class="modal-content item-modal-content">
+                <div class="modal-header">
+                    <h3 id="item-title" class="modal-title"></h3>
+                    <button class="close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="item-description"></p>
+                    <div id="item-actions">
+                        <!-- Action buttons will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="messageModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="message-title">
+            <div class="modal-content message-modal-content">
+                <div class="modal-header">
+                    <h3 id="message-title" class="modal-title">Not Yet</h3>
+                    <button class="close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="message-text"></p>
+                    <div id="message-actions"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="achievementsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="achievements-title">
+            <div class="modal-content achievements-modal-content">
+                <div class="modal-header">
+                    <h3 id="achievements-title" class="modal-title">Achievements</h3>
+                    <button class="close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body achievements-modal-body">
+                    <p id="achievements-count" class="achievements-count"></p>
+                    <ul id="achievements-list" class="achievements-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="saveSlotsModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="save-slots-title" aria-describedby="save-slots-help">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="save-slots-title" class="modal-title">Save / Restore</h3>
+                    <button class="close" type="button" aria-label="Close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="save-slots-help">Three saves in this browser. Overwrite replaces a slot; Restore returns to that point. Automatic saving continues separately.</p>
+                    <ul id="save-slots-list"></ul>
+                    <p id="save-slots-status" role="status" aria-live="polite"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="achievement-popup" class="achievement-popup" role="status" aria-live="polite" hidden>
+            <div class="achievement-star" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M12 2.8l2.8 5.7 6.3.9-4.6 4.5 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9L12 2.8z"></path>
+                </svg>
+            </div>
+            <div>
+                <p class="achievement-popup-kicker">Achievement Unlocked</p>
+                <p id="achievement-popup-name" class="achievement-popup-name"></p>
+                <p id="achievement-popup-description" class="achievement-popup-description"></p>
+            </div>
+            <button id="achievement-popup-close" class="achievement-popup-close" type="button" aria-label="Close achievement notification">
+                <span aria-hidden="true"></span>
+                <span aria-hidden="true"></span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="{{entry}}"></script>
+</body>
+</html>

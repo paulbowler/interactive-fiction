@@ -1,0 +1,33 @@
+name: Publish GitHub release archives
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to release (for example v1.0.0)
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - name: Verify tag matches package versions
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node scripts/verify-release.js
+      - name: Create immutable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: gh release create "$RELEASE_TAG" release/*.tgz release/SHA256SUMS --verify-tag --title "$RELEASE_TAG" --notes-file RELEASE_NOTES.md

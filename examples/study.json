@@ -1,0 +1,34 @@
+{
+  "id": "quiet-study",
+  "title": "A Quiet Study",
+  "version": "1",
+  "startScreen": { "title": "A Quiet Study" },
+  "achievements": {},
+  "endings": [],
+  "items": {},
+  "clock": { "minutesPerTurn": 1 },
+  "player": { "currentRoom": "study", "elapsedMinutes": 0, "carried": {}, "worn": {} },
+  "rooms": {
+    "study": {
+      "name": "Study",
+      "description": "A wooden box rests beside a brass key.",
+      "exits": { "hall": { "before": "a doorway leads to the " } },
+      "items": {
+        "brass-key": { "name": "Brass Key", "properties": { "portable": true } },
+        "wooden-box": {
+          "name": "Wooden Box",
+          "properties": {
+            "container": {
+              "openable": true, "opened": false,
+              "lockable": true, "locked": true, "key": "brass-key",
+              "items": { "letter": { "name": "Letter", "description": "Meet me at dusk.", "properties": { "portable": true } } }
+            }
+          }
+        },
+        "desk": { "name": "Desk", "properties": { "container": { "supporter": true, "opened": true, "items": {} } } },
+        "statue": { "name": "Statue", "properties": { "portable": true, "fixed": true } }
+      }
+    },
+    "hall": { "name": "Hall", "description": "A quiet corridor.", "exits": { "study": {} }, "items": {} }
+  }
+}

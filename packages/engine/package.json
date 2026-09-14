@@ -1,0 +1,33 @@
+{
+  "name": "@paulbowler/if-engine",
+  "version": "1.0.0",
+  "description": "Reusable interactive-fiction engine",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "src",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Paul Bowler",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulbowler/interactive-fiction.git",
+    "directory": "packages/engine"
+  },
+  "homepage": "https://github.com/paulbowler/interactive-fiction#readme",
+  "bugs": {
+    "url": "https://github.com/paulbowler/interactive-fiction/issues"
+  }
+}
