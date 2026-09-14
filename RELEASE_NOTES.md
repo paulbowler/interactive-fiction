@@ -1,8 +1,10 @@
-# Interactive Fiction v1.3.0
+# Interactive Fiction v1.4.0
 
-Description selectors can now return one variant ID or an ordered array of IDs, such as `['default', 'lampLit']`. This supports composed descriptions while keeping every passage named and all decisions in controller JavaScript. Catalog order does not determine selection order. An empty selection means no description; omitted selection still uses `default`. Unknown, non-string and duplicate IDs are rejected.
+World authors can now declare examinable room features in a `scenery` collection. This names their role accurately whether or not they reveal a clue. Inline links and named descriptions use the same stable room-local IDs.
 
-Runtime schema and save format remain 1. Existing single-variant selectors and compatible saved state continue to work.
+The loader produces the unchanged v1 runtime collection (`clues`), preserving controller APIs and saved examination progress. Existing input remains accepted. Conflicting collections, malformed scenery entries and invalid descriptions fail with authoring paths. The separate object flag `scenery: true` continues to control automatic room listing.
+
+Runtime schema and save format remain 1.
 
 The two MIT-licensed packages are:
 
@@ -12,7 +14,7 @@ The two MIT-licensed packages are:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-engine-1.3.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-browser-1.3.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.4.0/paulbowler-if-engine-1.4.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.4.0/paulbowler-if-browser-1.4.0.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

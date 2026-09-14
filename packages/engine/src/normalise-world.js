@@ -12,7 +12,25 @@ export function normaliseWorld(definition) {
         return value;
     };
     record(world, 'world');
+    // Scenery is authored by room. Keep one collection in the v1 runtime/save
+    // format so existing controllers and saved examination progress still work.
+    for (const [id, room] of Object.entries(world.rooms || {})) {
+        if (room?.scenery === undefined) continue;
+        const path = `rooms.${id}.scenery`;
+        if (Object.hasOwn(room, 'clues')) fail(path, 'declare scenery only, not both scenery and clues');
+        record(room.scenery, path);
+        for (const [key, feature] of Object.entries(room.scenery)) {
+            if (!key.trim() || key.includes(':')) fail(`${path}.${key}`, 'expected a nonempty room-local ID without a colon');
+            record(feature, `${path}.${key}`);
+            if (feature.title !== undefined && typeof feature.title !== 'string') fail(`${path}.${key}.title`, 'expected a string');
+        }
+    }
     validateWorldDescriptions(world);
+    for (const room of Object.values(world.rooms || {})) {
+        if (room?.scenery === undefined) continue;
+        room.clues = room.scenery;
+        delete room.scenery;
+    }
     if (world.schemaVersion !== undefined && world.schemaVersion !== 1) fail('schemaVersion', 'Unsupported world schema version');
     if (world.player?.currentRoom !== undefined && world.player.room === undefined) return world;
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');

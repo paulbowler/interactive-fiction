@@ -108,3 +108,64 @@ test('Quiet Study authoring compiles into the complete ordinary puzzle',async()=
     assert.equal(game.state.player.carried.letter.description,'Meet me at dusk.');
     assert.equal(game.state.player.elapsedMinutes,5);
 });
+
+test('room scenery preserves scoped links, named prose, examination and v1 saves',()=>{
+    const input=minimal();
+    input.rooms.study.description='A [[mural|mural]] covers the wall.';
+    input.rooms.study.scenery={mural:{title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}};
+    input.rooms.hall={name:'Hall',scenery:{mural:{description:'A different mural.'}}};
+    input.rooms.study.items={arch:{name:'Arch',scenery:true,fixed:true}};
+    const initial=structuredClone(input);
+    const create=()=>{
+        const game=createGame(input);
+        game.describe('study:mural',ctx=>ctx.target.examined?'examined':'default');
+        return game;
+    };
+    const game=create(), normalized=normaliseWorld(input);
+    assert.deepEqual(input,initial);
+    assert.deepEqual(normaliseWorld(normalized),normalized);
+    assert.ok(!Object.hasOwn(game.state.rooms.study,'scenery'),'one runtime collection');
+    assert.equal(game.findItem('arch').item.properties.scenery,true,'object listing flag is independent');
+    assert.equal(game.getDescription('hall:mural'),'A different mural.');
+    const feature=game.state.rooms.study.clues.mural;
+    assert.equal(game.getExamineLinkTarget('mural',game.state.rooms.study.clues).clue,feature);
+    const time=game.state.player.elapsedMinutes;
+    const result=game.dispatch({type:'examineClue',target:'study:mural'});
+    assert.equal(result.messages[0].args[0],'A painted ship.');
+    assert.equal(feature.examined,true);
+    assert.equal(game.state.player.elapsedMinutes,time);
+    assert.equal(game.dispatch({type:'examineClue',target:'hall:mural'}).success,false);
+    const saved=JSON.parse(JSON.stringify(game.save()));
+    assert.deepEqual(create().load(saved).save(),saved);
+    assert.equal(create().load(saved).getDescription('study:mural'),'A painted ship.');
+    const compatible=structuredClone(input);
+    for(const room of Object.values(compatible.rooms)){room.clues=room.scenery;delete room.scenery;}
+    assert.deepEqual(normaliseWorld(compatible),normalized,'the naming change preserves every canonical value');
+});
+
+test('scenery declarations fail clearly for conflicting collections or invalid entries',()=>{
+    const invalid=[
+        [{scenery:{},clues:{}},/scenery.*not both/],
+        [{scenery:[]},/scenery.*expected an object/],
+        [{scenery:null},/scenery.*expected an object/],
+        [{scenery:{mural:'paint'}},/scenery.mural.*expected an object/],
+        [{scenery:{'':{}}},/scenery.*room-local ID/],
+        [{scenery:{'study:mural':{}}},/scenery.*room-local ID/],
+        [{scenery:{mural:{title:7}}},/scenery.mural.title.*string/],
+        [{scenery:{mural:{description:{lit:'No default'}}}},/scenery.mural.description.*default/],
+    ];
+    for(const [room,error]of invalid){const world=minimal();Object.assign(world.rooms.study,room);assert.throws(()=>normaliseWorld(world),error);}
+});
+
+test('JSON5 scenery compiles without changing IDs or prose',async t=>{
+    const directory=await fs.mkdtemp(path.join(os.tmpdir(),'if-scenery-'));t.after(()=>fs.rm(directory,{recursive:true,force:true}));
+    const file=path.join(directory,'world.json5');
+    await fs.writeFile(file,`{title:'Gallery',player:{room:'gallery'},rooms:{gallery:{
+        description:'A [[mural|wall-art]] covers the wall.',
+        scenery:{'wall-art':{title:'Mural',description:'A painted ship.'}},
+    }}}`);
+    const world=await loadWorld(file),game=createGame(world);
+    assert.equal(game.getDescription('gallery:wall-art'),'A painted ship.');
+    assert.equal(world.rooms.gallery.scenery,undefined);
+    assert.equal(world.rooms.gallery.clues['wall-art'].title,'Mural');
+});

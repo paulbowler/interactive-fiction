@@ -1,6 +1,6 @@
 # Model and controller feature reference
 
-This reference covers the built-in feature families in platform 1.3. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+This reference covers the built-in feature families in platform 1.4. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
 
 **Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered script IDs. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
 
@@ -9,7 +9,7 @@ This reference covers the built-in feature families in platform 1.3. Read [World
 | Feature | Reference |
 | --- | --- |
 | Identity, prototypes, starting inventory, normalization, validation | [World authoring](world-model.md) |
-| Start screen, rooms, images, prose, clues | [Presentation](#presentation-and-discovery) |
+| Start screen, rooms, images, prose, scenery | [Presentation](#presentation-and-discovery) |
 | Navigation, passages, doors, blockers | [Navigation](#navigation-and-blockers) |
 | Scenery, hidden objects, portability, reachability | [Object flags](#object-flags-and-inventory) |
 | Containers, supporters, insertion, connections | [Containers and devices](#containers-and-devices) |
@@ -33,14 +33,14 @@ This reference covers the built-in feature families in platform 1.3. Read [World
 | `startScreen.buttonLabel` | String; defaults to `Start` |
 | `startScreen.imageUrl`, `imagePosition` | Opening illustration and crop alignment |
 | Room `name`, `description` | Display name and string or named-variant description |
-| Room `items`, `exits`, `clues` | Dictionaries keyed by stable IDs; exits are keyed by destination room |
+| Room `items`, `exits`, `scenery` | Dictionaries keyed by stable IDs; exits are keyed by destination room |
 | Room `cues` | Conditional prose shown with current observations |
 | Room `observations` | Array of `{condition, text}`; report a false-to-true condition change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
 | Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
 | Object `description`, `detail` | String or named-variant description and additional examination detail string |
-| Clue `title`, `description` | Examination popup title and string or named-variant description; clues are not inventory objects |
+| Scenery `title`, `description` | Examination popup title and string or named-variant description; room scenery is examinable but cannot be carried |
 
 Images are local project paths included by the build, such as `./assets/study.svg`. `imagePosition.x` accepts `left`, `center`/`centre`, `right`; `y` accepts `top`, `middle`/`center`/`centre`, `bottom`. Defaults center the image. Numeric percentages are not interpreted. The standard view uses start, room and ending images; storing an object image does not create a separate object-image interface automatically.
 
@@ -52,7 +52,7 @@ Entity `description` is a string or named alternatives with a required `default`
     { id: 'default', text: 'A [[mural|mural]] covers the wall.' },
     { id: 'lit', text: 'Light reveals a [[small plaque|item:plaque]] beside the [[mural|mural]].' },
   ],
-  clues: {
+  scenery: {
     mural: { title: 'The Mural', description: 'A painted ship approaches the shore.' },
   },
 }
@@ -65,9 +65,15 @@ game.describe('gallery', ctx =>
 
 Other conditional prose fields accept strings or arrays of strings and `{condition, text}` segments. All matching segments concatenate in order; preserve spaces between them. Entity descriptions also accept these segment arrays, but named alternatives must not contain conditions or mix with segments. Start/end screen `text` arrays are **paragraphs**; use a nested segment array for a conditional paragraph.
 
-In room/examination prose, `[[label|clueID]]` links to a clue in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
+In room/examination prose, `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
 
-`dispatch({type:'examineClue', target:'gallery:mural'})` marks `clue.examined` and normally saves without advancing time. Use rules on `examineClue` for discovery consequences. A controller may configure `clue.onExamine` with `once`, `condition`, `consumesTurn` and registered `effects`; that behavior belongs outside JSON5. `examined` and `onExamine.examined` are runtime progress.
+Room `scenery` contains examinable features such as murals, windows and notices. A feature need not reveal a clue. Its ID is local to its room; use `roomID:sceneryID` for description resolvers. Omit the collection when there are no features. Do not declare both `scenery` and `clues` in one room.
+
+The loader compiles room `scenery` to `rooms[roomID].clues` in the v1 runtime/save format. Controllers use that runtime path; there is only one mutable collection. Existing `clues` input remains accepted. The examination action retains the public name `examineClue`:
+
+`dispatch({type:'examineClue', target:'gallery:mural'})` marks `feature.examined` and normally saves without advancing time. Use rules on `examineClue` for discovery consequences. A controller may configure `feature.onExamine` with `once`, `condition`, `consumesTurn` and registered `effects`; that behavior belongs outside JSON5. `examined` and `onExamine.examined` are runtime progress.
+
+For scenery with ordinary actions (opening a window, pushing a statue), declare an object in room `items` instead. Its optional `scenery: true` flag suppresses automatic listing while preserving normal actions. Room `scenery` and the object listing flag have different roles; neither implies a puzzle reward or discovery.
 
 ## Navigation and blockers
 

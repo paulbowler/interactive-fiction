@@ -41,6 +41,8 @@ Write your world in `data/game.json5`. JSON5 supports comments, trailing commas,
 
 For scenery, achievements, prose, navigation, notebooks, devices, actor missions and transport, see the [model and controller feature reference](feature-reference.md). It distinguishes authoring data from controller configuration and engine-maintained state.
 
+Room `scenery` is an optional dictionary of examinable features, such as a mural or notice. For example, `scenery: { mural: { title: 'Mural', description: 'A painted ship.' } }` pairs with the prose link `[[mural|mural]]`. Use ordinary `items` for objects that need actions such as opening or pushing. See the [scenery reference](feature-reference.md#presentation-and-discovery) for controller access and saved state.
+
 ## IDs and values
 
 Entity IDs are collection keys. Keep them stable for references, rules and saves. `brassKey` is an unquoted key; a kebab-case key must be quoted: `'brass-key'`. References are always strings, such as `key: 'brassKey'` and `room: 'study'`. Display names and prose are strings too. Use real booleans and numbers: `portable: true`, `weight: 3`.
@@ -91,7 +93,7 @@ An object cannot be both a door and a container, or start both open and locked. 
 
 ## Descriptions
 
-Use the same `description` field on rooms, objects and clues. A string is displayed directly:
+Use the same `description` field on rooms, objects and scenery. A string is displayed directly:
 
 ```json5
 description: 'A brass key.',
@@ -115,7 +117,7 @@ game.describe('woodenBox', ctx =>
 
 The controller returns a variant ID, or an ordered array of IDs to combine passages, keeping prose in the model and puzzle conditions in JavaScript. Without a resolver, or when it returns `undefined`, the engine uses `default`. An unknown ID is an error. An empty returned array intentionally produces no text. Duplicate IDs and non-string selections are errors. The order returned by the controller determines composition, independently of catalog order. Existing authored spaces are retained; examination prose also retains the engine’s sentence-spacing behavior. Plain strings bypass selection. A compact named-object spelling is also supported: `description: { default: 'The box is closed.', opened: 'The box is open.' }`.
 
-Use room IDs for rooms and `roomID:clueID` for clues. Selection happens whenever text is requested, including after restoring a save. Resolvers must be synchronous and should only read current state: rendering must not change game progress, emit events or advance time. Re-register resolvers in every game factory before loading. No selected variant is cached in the save.
+Use room IDs for rooms and `roomID:sceneryID` for room scenery. Selection happens whenever text is requested, including after restoring a save. Resolvers must be synchronous and should only read current state: rendering must not change game progress, emit events or advance time. Re-register resolvers in every game factory before loading. No selected variant is cached in the save.
 
 `game.getDescription(id)` returns the selected base text. Normal room/examination rendering uses the same selection and retains its usual annotations, cues and inline links. This format applies to entity descriptions; it does not change start-screen paragraphs, ending text, readable text, cues or other prose fields. See the [description API](api.md#description-resolvers).
 

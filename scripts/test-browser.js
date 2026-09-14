@@ -24,9 +24,12 @@ try {
     const story=await fs.readFile(storyFile,'utf8');
     await fs.writeFile(storyFile,story.replace('export function register(game) {', `export function register(game) {
         game.registerScript('duskIllustration', ctx => ctx.state.player.dusk === true);
+        game.describe('study:mural', ctx => ctx.target.examined ? 'examined' : 'default');
         game.state.rooms.study.imageVariants[0].condition = {predicate:'duskIllustration'};`));
     const worldFile=path.join(project,'data/game.json5');
-    await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8')).replace("name: 'Study',", "name: 'Study', imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],"));
+    await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
+        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
+        .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural|mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
     server=http.createServer(async(request,response)=>{
@@ -47,6 +50,9 @@ try {
     await page.locator('#start-game-button').click();
     assert.equal(await page.locator('#room-name').textContent(),'Study');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'center center');
+    await page.locator('#room-description').getByRole('button',{name:'mural',exact:true}).click();
+    assert.ok((await page.locator('#messageModal').textContent()).includes('A painted ship.'));
+    await page.locator('#messageModal .close').click();
     const action=async(region,item,label)=>{
         await page.locator(region).getByRole('button',{name:item,exact:true}).click();
         await page.locator('#item-actions').getByRole('button',{name:label,exact:true}).click();
@@ -68,6 +74,7 @@ try {
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
+    assert.equal((await state()).rooms.study.clues.mural.examined,true);
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     await page.reload();
@@ -77,6 +84,7 @@ try {
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.dusk);
+    assert.equal((await state()).rooms.study.clues.mural.examined,true);
     assert.equal((await state()).rooms.study.imageVariants[0].condition.predicate,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');

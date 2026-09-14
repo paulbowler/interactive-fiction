@@ -31,7 +31,7 @@ Canonical types include `start`, `go`, `look`, `examine`, `examineClue`, `take`,
 - `go.target`: destination room ID, connected from the current room.
 - `unlock.target`: container/door; `secondaryTarget`: held matching key.
 - Placement and `useOn`: primary object in `target`, destination in `secondaryTarget`.
-- `examineClue.target`: `room-id:clue-id`.
+- `examineClue.target`: `room-id:scenery-id`. Examines a feature authored in room `scenery`; the v1 runtime collection is `clues`.
 - `choose`/`tool`/`record`: zero-based `index`.
 - `chooseOption`: `choiceIndex` and `optionIndex`.
 - `submitInput`: `value`; `enterText`: recorded note in `target`, input device in `secondaryTarget`.

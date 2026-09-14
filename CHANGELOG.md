@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Author examinable room features in a `scenery` collection, with room-local IDs and named descriptions.
+- Normalize to the unchanged v1 runtime/save representation; existing controllers and examination progress remain compatible.
+- Validate scenery collections, entries and description catalogs with clear authoring paths.
+- Clarify room scenery versus the object listing flag in the authoring reference.
+
 ## 1.3.0
 
 - Description selectors can return an ordered list of variant IDs to compose several named passages.

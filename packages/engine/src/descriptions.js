@@ -40,6 +40,7 @@ export function validateWorldDescriptions(world) {
     for (const [id, room] of Object.entries(world.rooms || {})) {
         entity(room, `rooms.${id}`);
         for (const [key, clue] of Object.entries(room?.clues || {})) entity(clue, `rooms.${id}.clues.${key}`);
+        for (const [key, feature] of Object.entries(room?.scenery || {})) entity(feature, `rooms.${id}.scenery.${key}`);
         items(room?.items, `rooms.${id}.items`);
     }
     items(world.items, 'items');
