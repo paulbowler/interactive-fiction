@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- One `description` field for plain text or named variants, with a required default.
+- `game.describe` controller registration and `game.getDescription` queries for rooms, objects and clues.
+- Description validation, deterministic selection and save/restore regression coverage.
+- Study template and documentation demonstrate state-dependent prose outside the model.
+- Compatible runtime schema and save format 1; existing conditional segments retain their semantics.
+
 ## 1.1.0
 
 - Compact JSON5 world authoring with flat capabilities and nested contents.

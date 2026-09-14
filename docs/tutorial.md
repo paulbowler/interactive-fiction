@@ -19,7 +19,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v1.1.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v1.2.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 
@@ -214,3 +214,22 @@ Install both archives for the new platform release, using the URLs from its rele
 Do not edit files in `node_modules` to fix your story. Put exceptional rules in `src/story.js`; report reusable engine defects to the platform repository. If an upgrade fails your tests, keep the previous dependency versions while investigating.
 
 For the full supported schema and API, see [API reference](api.md). Agents implementing a game should also read [the agent guide](agent-guide.md).
+
+## Give a room changing prose
+
+The study template keeps both room descriptions in its JSON5 model:
+
+```json5
+description: [
+  { id: 'default', text: 'A wooden box rests beside a brass key.' },
+  { id: 'dusk', text: 'Dusk gathers beyond the study window.' },
+],
+```
+
+Its controller selects the text from the current dusk flag:
+
+```js
+game.describe('study', ctx => ctx.state.player.dusk ? 'dusk' : 'default');
+```
+
+The scheduled story event changes the flag. The next render selects the matching text automatically, including after loading. An ordinary object can still use `description: 'A brass key.'`; no selector is needed. Use stable variant IDs, keep a `default`, and put the decision in JavaScript. The [description reference](world-model.md#descriptions) also covers objects, clues, validation and headless queries.

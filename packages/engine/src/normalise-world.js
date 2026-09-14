@@ -1,3 +1,4 @@
+import { validateWorldDescriptions } from './descriptions.js';
 import { cloneSerializable } from './serialization.js';
 
 // Authoring is concise; runtime containment has one owner collection per object.
@@ -11,6 +12,7 @@ export function normaliseWorld(definition) {
         return value;
     };
     record(world, 'world');
+    validateWorldDescriptions(world);
     if (world.schemaVersion !== undefined && world.schemaVersion !== 1) fail('schemaVersion', 'Unsupported world schema version');
     if (world.player?.currentRoom !== undefined && world.player.room === undefined) return world;
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');

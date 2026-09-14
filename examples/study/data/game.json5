@@ -17,7 +17,10 @@
   rooms: {
     study: {
       name: 'Study',
-      description: 'A wooden box rests beside a brass key.',
+      description: [
+        { id: 'default', text: 'A wooden box rests beside a brass key.' },
+        { id: 'dusk', text: 'Dusk gathers beyond the study window.' },
+      ],
       exits: {
         hall: {
           before: 'a doorway leads to the ',

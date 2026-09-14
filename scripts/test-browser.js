@@ -55,6 +55,7 @@ try {
         return browserView.game.save();
     });
     assert.ok((await state()).player.dusk);
+    assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
@@ -65,6 +66,7 @@ try {
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.dusk);
+    assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok(await page.locator('#room-image').evaluate(img=>img.complete&&img.naturalWidth>0));
     assert.deepEqual(errors,[]);
     console.log('PASS: Independent study uses packaged UI/actions, saves and reloads offline beneath /demo/.');

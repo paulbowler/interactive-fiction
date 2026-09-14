@@ -1,3 +1,4 @@
+import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
 import { normaliseWorld } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
 import { createActions } from './actions.js';
@@ -35,6 +36,7 @@ function cloneModel(model) {
 }
 
 function validateWorld(model, referenceModel = model) {
+    validateWorldDescriptions(model);
     const object = (value) => value && typeof value === 'object' && !Array.isArray(value);
     const require = (valid, message) => { if (!valid) throw new Error(`Invalid world: ${message}`); };
     require(object(model) && typeof model.version === 'string', 'version is required');
@@ -479,7 +481,7 @@ function getRoomDescriptionParts(roomKey) {
     return [
         {
             type: 'main',
-            text: buildConditionalText(gameModel.rooms[roomKey].description)
+            text: descriptions.resolve(roomKey, gameModel.rooms[roomKey], false)
         }
     ].filter((part) => part.text);
 }
@@ -694,7 +696,7 @@ function getExamineLinkTarget(clueKey, clues) {
 
 function showClueModal(clue, extraMessages = []) {
     const messageParts = [
-        buildConditionalText(clue.description, true),
+        descriptions.clue(clue),
         ...extraMessages
     ].filter(Boolean);
 
@@ -707,7 +709,7 @@ function examineClue(clue) {
         clue.examined = true;
     }
 
-    const description = buildConditionalText(clue.description, true);
+    const description = descriptions.clue(clue);
     const result = runClueOnExamine(clue);
     const revealMessages = result.messages;
     commitMutation(result.ran && clue.onExamine?.consumesTurn === true);
@@ -1264,7 +1266,7 @@ function readItem(itemKey) {
 }
 
 function getItemDescription(itemKey, item) {
-    const descriptionParts = [buildConditionalText(item.description, true)];
+    const descriptionParts = [descriptions.resolve(itemKey, item, true)];
     const pushable = item.properties?.pushable;
     const climbable = item.properties?.climbable;
     const connectedItemsText = getConnectedItemsInlineText(itemKey);
@@ -2491,6 +2493,9 @@ const api = {
     startTimer,
     advanceTimers
 };
+const descriptions = createDescriptions(api);
+api.describe = descriptions.describe;
+api.getDescription = descriptions.getDescription;
 api.events = createEvents();
 const worldEvents = createWorldEvents(api);
 const actions = createActions(api);

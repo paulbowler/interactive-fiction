@@ -1,5 +1,6 @@
 // This is the entire bespoke controller for this game. Ordinary actions need no scripts.
 export function register(game) {
+    game.describe('study', ctx => ctx.state.player.dusk ? 'dusk' : 'default');
     game.after('take', 'letter', ctx => {
         ctx.state.player.letterDiscovered = true;
         ctx.emit('letterDiscovered');

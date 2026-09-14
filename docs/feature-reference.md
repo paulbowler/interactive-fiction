@@ -1,6 +1,6 @@
 # Model and controller feature reference
 
-This reference covers the built-in feature families in platform 1.1. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+This reference covers the built-in feature families in platform 1.2. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
 
 **Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered script IDs. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
 
@@ -32,32 +32,38 @@ This reference covers the built-in feature families in platform 1.1. Read [World
 | `startScreen.text` | String or paragraph array; `description` is a fallback |
 | `startScreen.buttonLabel` | String; defaults to `Start` |
 | `startScreen.imageUrl`, `imagePosition` | Opening illustration and crop alignment |
-| Room `name`, `description` | Display name and conditional prose |
+| Room `name`, `description` | Display name and string or named-variant description |
 | Room `items`, `exits`, `clues` | Dictionaries keyed by stable IDs; exits are keyed by destination room |
 | Room `cues` | Conditional prose shown with current observations |
 | Room `observations` | Array of `{condition, text}`; report a false-to-true condition change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
 | Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
-| Object `description`, `detail` | Conditional description and additional examination detail string |
-| Clue `title`, `description` | Examination popup title and conditional prose; clues are not inventory objects |
+| Object `description`, `detail` | String or named-variant description and additional examination detail string |
+| Clue `title`, `description` | Examination popup title and string or named-variant description; clues are not inventory objects |
 
 Images are local project paths included by the build, such as `./assets/study.svg`. `imagePosition.x` accepts `left`, `center`/`centre`, `right`; `y` accepts `top`, `middle`/`center`/`centre`, `bottom`. Defaults center the image. Numeric percentages are not interpreted. The standard view uses start, room and ending images; storing an object image does not create a separate object-image interface automatically.
 
-A prose value is a string or an array of strings and `{condition, text}` segments. All matching segments are concatenated in order; this is not a first-match switch. Preserve spaces between segments. Start/end screen `text` arrays are **paragraphs**; use a nested segment array for a conditional paragraph.
+Entity `description` is a string or named alternatives with a required `default`, selected by `game.describe` in the controller. See [World descriptions](world-model.md#descriptions) for the format and [Description resolvers](api.md#description-resolvers) for the API.
 
 ```json5
 {
   description: [
-    'A [[mural|mural]] covers the wall. ',
-    { condition: { type: 'itemState', item: 'lamp', state: 'turnedOn' },
-      text: 'Light reveals a [[small plaque|item:plaque]].' },
+    { id: 'default', text: 'A [[mural|mural]] covers the wall.' },
+    { id: 'lit', text: 'Light reveals a [[small plaque|item:plaque]] beside the [[mural|mural]].' },
   ],
   clues: {
     mural: { title: 'The Mural', description: 'A painted ship approaches the shore.' },
   },
 }
 ```
+
+```js
+game.describe('gallery', ctx =>
+  ctx.game.findItem('lamp').item.properties.turnedOn ? 'lit' : 'default');
+```
+
+Other conditional prose fields accept strings or arrays of strings and `{condition, text}` segments. All matching segments concatenate in order; preserve spaces between them. Entity descriptions also accept these segment arrays, but named alternatives must not contain conditions or mix with segments. Start/end screen `text` arrays are **paragraphs**; use a nested segment array for a conditional paragraph.
 
 In room/examination prose, `[[label|clueID]]` links to a clue in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
 

@@ -13,4 +13,5 @@ test('letter discovery and delayed dusk survive a save',()=>{
     const restored=create().load(game.save());
     restored.dispatch({type:'wait'});
     assert.equal(restored.state.player.dusk,true);
+    assert.equal(restored.getRoomDescriptionText('study'),'Dusk gathers beyond the study window.');
 });
