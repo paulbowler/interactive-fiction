@@ -1,6 +1,6 @@
 # Model and controller feature reference
 
-This reference covers the built-in feature families in platform 1.2. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+This reference covers the built-in feature families in platform 1.3. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
 
 **Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered script IDs. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
 
@@ -44,7 +44,7 @@ This reference covers the built-in feature families in platform 1.2. Read [World
 
 Images are local project paths included by the build, such as `./assets/study.svg`. `imagePosition.x` accepts `left`, `center`/`centre`, `right`; `y` accepts `top`, `middle`/`center`/`centre`, `bottom`. Defaults center the image. Numeric percentages are not interpreted. The standard view uses start, room and ending images; storing an object image does not create a separate object-image interface automatically.
 
-Entity `description` is a string or named alternatives with a required `default`, selected by `game.describe` in the controller. See [World descriptions](world-model.md#descriptions) for the format and [Description resolvers](api.md#description-resolvers) for the API.
+Entity `description` is a string or named alternatives with a required `default`, selected by `game.describe` in the controller. Return one ID for a single passage, or an ordered array of IDs to compose several passages. See [World descriptions](world-model.md#descriptions) for the format and [Description resolvers](api.md#description-resolvers) for the API.
 
 ```json5
 {

@@ -21,7 +21,7 @@ Author flat capabilities (`portable: true`, `container: true`) and nested `items
 
 Use model properties for ordinary portability, fixed objects, containers, keys, doors and room connections. The engine already implements these semantics. Use rules for unusual restrictions or consequences. A view formats and dispatches intentions; it must not decide story outcomes.
 
-Keep changing prose under one `description` field: use a string for ordinary text, or named `{id, text}` alternatives with `default`. Register `game.describe(id, ctx => variantID)` in the controller. Keep selectors synchronous and free of mutations; test each meaningful state and save/load. See [Descriptions](world-model.md#descriptions).
+Keep changing prose under one `description` field: use a string for ordinary text, or named `{id, text}` alternatives with `default`. Register `game.describe(id, ctx => variantID)` in the controller. Return an ordered array of variant IDs when several passages must be combined; never use catalog array positions as selectors. Keep selectors synchronous and free of mutations; test each meaningful state and save/load. See [Descriptions](world-model.md#descriptions).
 
 Use `before` to block or prepare an attempt, `instead` to replace it, and `after` for consequences of a successful standard action. Return `STOP`, `HANDLED` or `CONTINUE`/undefined; never overloaded booleans. A custom replacement that mutates state must call `ctx.commit()` (or `ctx.commit(false)` for a free mutation). Do not commit again inside an after rule.
 

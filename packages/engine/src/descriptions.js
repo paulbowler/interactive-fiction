@@ -83,10 +83,13 @@ export function createDescriptions(game) {
                     target: entity, definition: find(game.world, id, true) });
             } finally { resolving.delete(id); }
         }
-        const key = selected === undefined ? 'default' : selected;
-        if (typeof key !== 'string' || !Object.hasOwn(catalog, key))
-            throw new Error(`Invalid description selection for ${id}: expected an existing variant key, received ${String(key)}`);
-        return catalog[key];
+        const keys = selected === undefined ? ['default'] : Array.isArray(selected) ? selected : [selected];
+        for (const key of keys) {
+            if (typeof key !== 'string' || !Object.hasOwn(catalog, key))
+                throw new Error(`Invalid description selection for ${id}: expected an existing variant key, received ${String(key)}`);
+        }
+        if (new Set(keys).size !== keys.length) throw new Error(`Duplicate description selection for ${id}`);
+        return game.buildConditionalText(keys.map(key => catalog[key]), separateSentences);
     }
     return {
         describe(id, resolver) {

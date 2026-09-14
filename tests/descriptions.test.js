@@ -81,7 +81,7 @@ test('bad resolver results, asynchronous handlers, duplicates and cycles fail cl
     const game=createGame(world());
     assert.throws(()=>game.describe('box',async()=> 'default'),/synchronous/);
     assert.throws(()=>game.describe('',()=> 'default'),/ID/);
-    for(const selected of ['missing',null,false,0,[],Promise.resolve('default')]) {
+    for(const selected of ['missing',null,false,0,[false],['missing'],Promise.resolve('default')]) {
         const remove=game.describe('box',()=>selected);
         assert.throws(()=>game.getDescription('box'),/Invalid description selection for box/);remove();
     }
@@ -128,4 +128,25 @@ test('named description arrays select one variant with stable IDs and a required
         assert.throws(()=>game.load(saved),/Invalid description.*workshop/);
         assert.deepEqual(game.save(),before);
     }
+});
+
+test('ordered named selections compose prose without positional authoring or state changes',()=>{
+    const input=world();
+    input.rooms.workshop.description=[
+        {id:'default',text:'A quiet workshop. '},
+        {id:'night',text:'The lamps are dark.'},
+        {id:'rain',text:' Rain taps at the windows.'},
+    ];
+    const game=createGame(input), before=game.save();
+    const remove=game.describe('workshop',()=>['default','rain']);
+    assert.equal(game.getDescription('workshop'),'A quiet workshop.  Rain taps at the windows.');
+    game.state.rooms.workshop.description.reverse();
+    assert.equal(game.getDescription('workshop'),'A quiet workshop.  Rain taps at the windows.','array order is irrelevant');
+    game.load(before);assert.equal(game.getDescription('workshop'),'A quiet workshop.  Rain taps at the windows.');
+    assert.deepEqual(game.save(),before);remove();
+    let off=game.describe('workshop',()=>[]);assert.equal(game.getDescription('workshop'),'');off();
+    off=game.describe('workshop',()=>['default','default']);assert.throws(()=>game.getDescription('workshop'),/Duplicate description selection/);off();
+    game.state.rooms.workshop.items.box.description={default:'A box.',opened:'It is open.'};
+    game.describe('box',()=>['default','opened']);
+    assert.equal(game.getDescription('box'),'A box. It is open.','item prose retains sentence spacing');
 });

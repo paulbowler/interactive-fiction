@@ -113,7 +113,7 @@ game.describe('woodenBox', ctx =>
   ctx.target.properties.container.opened ? 'opened' : 'default');
 ```
 
-The controller returns a variant ID, keeping the prose in the model and puzzle conditions in JavaScript. Without a resolver, or when it returns `undefined`, the engine uses `default`. An unknown ID is an error. Plain strings bypass selection. A compact named-object spelling is also supported: `description: { default: 'The box is closed.', opened: 'The box is open.' }`.
+The controller returns a variant ID, or an ordered array of IDs to combine passages, keeping prose in the model and puzzle conditions in JavaScript. Without a resolver, or when it returns `undefined`, the engine uses `default`. An unknown ID is an error. An empty returned array intentionally produces no text. Duplicate IDs and non-string selections are errors. The order returned by the controller determines composition, independently of catalog order. Existing authored spaces are retained; examination prose also retains the engine’s sentence-spacing behavior. Plain strings bypass selection. A compact named-object spelling is also supported: `description: { default: 'The box is closed.', opened: 'The box is open.' }`.
 
 Use room IDs for rooms and `roomID:clueID` for clues. Selection happens whenever text is requested, including after restoring a save. Resolvers must be synchronous and should only read current state: rendering must not change game progress, emit events or advance time. Re-register resolvers in every game factory before loading. No selected variant is cached in the save.
 

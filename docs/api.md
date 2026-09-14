@@ -66,7 +66,7 @@ game.describe('study:mural', ctx => ctx.target.examined ? 'revealed' : 'default'
 const text = game.getDescription('study');
 ```
 
-The entity's `description` is a string, an array of `{id, text}` alternatives, or a map of variant names to strings. Alternatives require `default`. A resolver returns one existing variant ID; `undefined` selects `default`. Unknown IDs and other return types throw. Strings bypass the resolver. Conditional segment arrays without variant IDs retain their concatenation behavior and also bypass it; see [World descriptions](world-model.md#descriptions).
+The entity's `description` is a string, an array of `{id, text}` alternatives, or a map of variant names to strings. Alternatives require `default`. A resolver returns one existing variant ID or an ordered array of IDs to combine passages. `undefined` selects `default`; `[]` produces no text. Duplicate IDs, unknown IDs, non-string entries and other return types throw. Catalog order has no effect on selection order. Composition preserves authored spaces and the normal room/examination spacing behavior. Strings bypass the resolver. Conditional segment arrays without variant IDs retain their concatenation behavior and also bypass it; see [World descriptions](world-model.md#descriptions).
 
 The resolver receives the ordinary context with `action.type: 'describe'`, the entity ID in `action.target`, the current entity in `target`, and its initial definition in `definition` when available. `room` is the player's current room, even when querying another room. `state`, `world` and `game` are available. Object capabilities use canonical `properties` paths. Always use the supplied current context rather than capturing mutable entity references across loads.
 

@@ -19,7 +19,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v1.2.1 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v1.3.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 
@@ -233,3 +233,12 @@ game.describe('study', ctx => ctx.state.player.dusk ? 'dusk' : 'default');
 ```
 
 The scheduled story event changes the flag. The next render selects the matching text automatically, including after loading. An ordinary object can still use `description: 'A brass key.'`; no selector is needed. Use stable variant IDs, keep a `default`, and put the decision in JavaScript. The [description reference](world-model.md#descriptions) also covers objects, clues, validation and headless queries.
+
+For descriptions that combine several passages, return their names in display order:
+
+```js
+game.describe('study', ctx =>
+  ctx.state.player.dusk ? ['default', 'dusk'] : 'default');
+```
+
+This keeps the room's introductory passage and adds the dusk passage. Supply the spacing you want between room passages in their model text. Reordering entries in the model does not change the controller's selected order.

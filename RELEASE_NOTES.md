@@ -1,8 +1,8 @@
-# Interactive Fiction v1.2.1
+# Interactive Fiction v1.3.0
 
-This patch preserves controller-configured room image variants during browser startup and save restoration. Presentation refresh and image preloading now use the configured model, so registering an image predicate in the controller works consistently across fresh games, loaded saves and offline play.
+Description selectors can now return one variant ID or an ordered array of IDs, such as `['default', 'lampLit']`. This supports composed descriptions while keeping every passage named and all decisions in controller JavaScript. Catalog order does not determine selection order. An empty selection means no description; omitted selection still uses `default`. Unknown, non-string and duplicate IDs are rejected.
 
-Engine action semantics, runtime schema and save format are unchanged.
+Runtime schema and save format remain 1. Existing single-variant selectors and compatible saved state continue to work.
 
 The two MIT-licensed packages are:
 
@@ -12,7 +12,7 @@ The two MIT-licensed packages are:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.2.1/paulbowler-if-engine-1.2.1.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.2.1/paulbowler-if-browser-1.2.1.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-engine-1.3.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-browser-1.3.0.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

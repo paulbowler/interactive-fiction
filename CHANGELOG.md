@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Description selectors can return an ordered list of variant IDs to compose several named passages.
+- Selection order is independent of catalog array order; empty selections intentionally produce no prose.
+- Unknown, non-string and duplicate selected IDs fail clearly.
+- Composition preserves existing room and examination spacing without storing derived prose.
+
 ## 1.2.1
 
 - Preserve controller-configured room image conditions during browser startup and save restoration.

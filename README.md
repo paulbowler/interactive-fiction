@@ -1,6 +1,6 @@
 # Interactive Fiction
 
-Reusable JavaScript packages for standalone point-and-click games. **Version 1.2.1 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
+Reusable JavaScript packages for standalone point-and-click games. **Version 1.3.0 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
 
 | Package | Purpose |
 | --- | --- |
@@ -56,7 +56,7 @@ Ordinary taking, dropping, containers, locks, inventory and movement need world 
 Packages are distributed as npm-compatible archives on [GitHub Releases](https://github.com/paulbowler/interactive-fiction/releases). No npm registry account is needed to consume them. The template’s `.npmrc` permits its declared release URLs on npm 12 and later.
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.2.1/paulbowler-if-engine-1.2.1.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.2.1/paulbowler-if-browser-1.2.1.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-engine-1.3.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.3.0/paulbowler-if-browser-1.3.0.tgz
 ```
 
 For an upgrade, install both archives for the desired release, run the game's tests, rebuild and redeploy. Commit the updated package and lock files. Existing deployments keep their installed release until redeployed. Keep the previous `dist` or source/lockfile release to roll back.
