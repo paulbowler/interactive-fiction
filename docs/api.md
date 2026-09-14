@@ -12,7 +12,7 @@ No deep source imports are public. The engine has no DOM, Node or story dependen
 
 ## World schema 1
 
-The schema preserves the original nested model rather than introducing an entity framework. Required top-level fields are `title`, string `version`, `rooms`, `items` (prototypes), `player`, `startScreen`, `achievements` and `endings`. A stable `id` is strongly recommended; older worlds fall back to their title. Optional `schemaVersion` defaults to 1. See the complete, runnable study world in `examples/study/data/game.json`.
+The schema represents rooms, objects and containment with nested collections. Required top-level fields are `title`, string `version`, `rooms`, `items` (prototypes), `player`, `startScreen`, `achievements` and `endings`. A stable `id` is strongly recommended; worlds without an ID use their title. Optional `schemaVersion` defaults to 1. See the complete, runnable study world in `examples/study/data/game.json`.
 
 Each room has a name, description, `exits` keyed by destination room ID, and `items` keyed by unique live object ID. Portable objects have `properties.portable: true`; fixed objects have `properties.fixed: true`. The player has a `currentRoom` and `carried`/`worn` object collections. `world.items` contains prototypes that scripts may instantiate later.
 
@@ -24,9 +24,9 @@ Descriptions may contain conditional prose. Generic conditions such as `itemStat
 
 `createGame(world, {seed})` clones the definition into independent `game.world` and mutable `game.state`. Treat `world` as read-only. The optional seed is a uint32. Register story scripts, then call `game.validateWorld(game.state)` to validate the configured world and references. Initialization rejects non-JSON data and unsupported schema versions; full cross-reference validation is explicit because story modules may register scripts after construction.
 
-`dispatch({type, actor:'player', target, secondaryTarget, ...})` is synchronous. Targets are IDs. Only player actor dispatch is supported. It returns `{action, status, success, messages, value, choices}`. `success` means a committed standard action or a handled replacement; a free query such as `look` returns its value without a successful mutation. Message entries contain `{type:'message', args:[text,title,...]}` for compatibility with the view.
+`dispatch({type, actor:'player', target, secondaryTarget, ...})` is synchronous. Targets are IDs. Only player actor dispatch is supported. It returns `{action, status, success, messages, value, choices}`. `success` means a committed standard action or a handled replacement; a free query such as `look` returns its value without a successful mutation. Message entries contain `{type:'message', args:[text,title,...]}` for rendering by the view.
 
-Canonical types include `start`, `go`, `look`, `examine`, `examineClue`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; former UI action labels are also accepted.
+Canonical types include `start`, `go`, `look`, `examine`, `examineClue`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; display-oriented action aliases are also accepted.
 
 - `go.target`: destination room ID, connected from the current room.
 - `unlock.target`: container/door; `secondaryTarget`: held matching key.
@@ -52,7 +52,7 @@ Context fields: `action`, actor ID, target/secondary objects, current room objec
 - `emit(name,data)`: publish a fact.
 - `commit(advanceTime=true)`: commit a custom handler's mutation. Use `false` for a free mutation. Do not commit again inside an after rule.
 
-For advanced scripts, v1 retains the generic helpers used during migration: `findItem` (item and owner location), `findItemInGameModel` (item alone), `getItemPropertyValue`, `moveItem`, `deleteItem`, `revealItem`, `createItemByEffect`, `setItemIdByEffect`, `performUpdateAction`, `awardAchievement`, `endGame`, `evaluateCondition`, `buildConditionalText`, `registerScript`, `startTimer`, `startMission` and `requestTransport`. These act on the current runtime; direct action methods are retained for compatibility but clients should use dispatch. Methods beginning with `_` are internal and not a compatibility contract.
+Advanced scripts can use these generic helpers: `findItem` (item and owner location), `findItemInGameModel` (item alone), `getItemPropertyValue`, `moveItem`, `deleteItem`, `revealItem`, `createItemByEffect`, `setItemIdByEffect`, `performUpdateAction`, `awardAchievement`, `endGame`, `evaluateCondition`, `buildConditionalText`, `registerScript`, `startTimer`, `startMission` and `requestTransport`. These act on the current runtime; clients should use dispatch for player intentions. Methods beginning with `_` are internal and not a compatibility contract.
 
 Stable `registerScript(id,callback)` IDs allow configured interactions and saved timers to refer to story callbacks without serializing functions. The callback receives a context. Registered effect references use `{script:id}`; predicate references use `{predicate:id}`. Register the same scripts in every new runtime before loading. Changes to a story's script IDs require a story save migration.
 
@@ -60,11 +60,11 @@ Stable `registerScript(id,callback)` IDs allow configured interactions and saved
 
 `events.on(name,handler)` returns unsubscribe. `events.emit(name,data)` delivers synchronous FIFO events; emissions inside a handler queue behind the current listeners. A bounded drain rejects event cycles. Built-in facts include `itemMoved` (`item`, `fromRoom`, `toRoom`), `playerEnteredRoom` (`room`) and `achievementEarned`. `stateCheck` and `checkEndings` allow story reactions at established turn boundaries.
 
-`schedule.afterTurns(turns,name,jsonData)` returns a job ID; `schedule.cancel(id)` cancels it. Zero means next successful turn. Jobs, IDs and random seed live in saved runtime data. Re-register event listeners after constructing a runtime. Existing generic transport, timer and mission state machines preserve their original order and timer-start grace.
+`schedule.afterTurns(turns,name,jsonData)` returns a job ID; `schedule.cancel(id)` cancels it. Zero means next successful turn. Jobs, IDs and random seed live in saved runtime data. Re-register event listeners after constructing a runtime. Each turn advances transports, timers and missions in that order. A newly started timer has a one-update grace period.
 
-`save()` returns a deep JSON copy with runtime `saveFormatVersion:1` and `worldSchemaVersion:1`. `load(saved)` validates and clones before replacing state, returns the game, and rejects another game's identity or unsupported future formats. Legacy saves without format metadata are accepted when structurally valid. `state` references must be reacquired after load. Scripts/listeners are configuration and are registered anew, not saved. The package version is intentionally not used to reject saves.
+`save()` returns a deep JSON copy with runtime `saveFormatVersion:1` and `worldSchemaVersion:1`. `load(saved)` validates and clones before replacing state, returns the game, and rejects another game's identity or unsupported future formats. Saves without explicit format metadata are interpreted as format 1 and validated. `state` references must be reacquired after load. Scripts/listeners are configuration and are registered anew, not saved. The package version is intentionally not used to reject saves.
 
-Browser automatic save selection also checks the story's string `version`. Keep it stable for compatible prose/engine updates, or supply a story migration when changing it. The King's Diamond owns its legacy-effect migration outside this engine.
+Browser automatic save selection also checks the story's string `version`. Keep it stable for compatible prose/engine updates, or supply a story migration when changing it. Save migrations are owned by the game controller.
 
 ## Browser and build
 

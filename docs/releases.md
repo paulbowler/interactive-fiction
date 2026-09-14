@@ -2,13 +2,13 @@
 
 The platform uses synchronized semantic versions for its engine and browser packages. Patch releases fix behavior without changing the public contract. Minor releases add compatible capabilities. Breaking public API, world schema or save semantics require a major release and migration instructions. Internal implementation paths are hidden behind package exports.
 
-Story release, world schema and saved-state format are independent. Never tie a game's story version to the engine package number just to deploy an upgrade. V1 continues to accept valid format-1 saves; adding optional runtime fields must retain defaults for prior saves. The original King's Diamond migration is game-owned.
+Story release, world schema and saved-state format are independent. Never tie a game's story version to the engine package number just to deploy an upgrade. V1 continues to accept valid format-1 saves; adding optional runtime fields must retain defaults for prior saves. Game-specific state migrations belong to the game's controller.
 
 ## Before a release
 
 1. Update both package versions, root version, exported version constants, example dependency URLs, changelog and release notes.
 2. Run `npm ci --ignore-scripts` and `npm run check`. The tests install packed artifacts into an independent project, not workspace symlinks.
-3. Install the candidate archives into the separate King's Diamond repository; run `npm test` and `npm run test:browser` while serving its new `dist`. Keep its action replays and legacy-save fixtures with the game.
+3. Install the candidate archives into representative independent game projects. Run their headless replays and browser tests while serving the new `dist`. Keep story-specific tests and save fixtures with each game.
 4. Review `npm pack --dry-run` contents. No games, artwork, credentials, tests, development caches or local paths belong in release archives.
 5. Commit the tested source and tag `vX.Y.Z`. Verify the GitHub CI matrix before publishing the archives.
 6. Run the repository's manual release workflow with that tag, or create a GitHub release with the exact tested archives and `SHA256SUMS`. Do not overwrite a published version's assets; issue a new version.

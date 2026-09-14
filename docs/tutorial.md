@@ -6,7 +6,7 @@ You need Node.js 22 or later and a text editor. You do not need to modify the en
 
 ## 1. Create a separate game project
 
-Download the platform's source from its v1.0.0 GitHub release. Copy the entire `examples/study` folder somewhere outside the platform repository and rename the copy to your game name.
+Download or clone the [platform repository](https://github.com/paulbowler/interactive-fiction). Copy the entire `examples/study` folder somewhere outside the platform repository and rename the copy to your game name.
 
 In that new folder:
 
@@ -19,7 +19,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v1.0.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies.
+The game depends on the two v1.0.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 
