@@ -85,7 +85,7 @@ For scenery with ordinary actions (opening a window, pushing a statue), declare 
 | `listed` | Boolean; `false` omits this exit from the automatic list, without removing the connection |
 | `visibleWhen` | Condition; false prevents both listing and travel |
 | `condition` | **Blocking** condition: a true ordinary condition blocks travel with its `message` |
-| `variants` | Ordered display variants with `condition`, `before`, `after`, `label`; does not replace the base travel checks |
+| `variants` | Display alternatives with optional `id`, `before`, `after`, `label`. The controller supplies conditions and runtime priority; the first matching variant wins. Does not replace the base travel checks. |
 | `successMessage`, `successTitle` | Travel feedback; title defaults to `Done` for immediate movement |
 | `deferMoveUntilMessageClosed` | Boolean; delays successful movement until feedback is acknowledged |
 | `beforeMove` | `{condition?, message, title?}`; an acknowledged pre-travel message, default title `Before Moving` |
@@ -115,6 +115,34 @@ The door's state does not automatically block an exit; declare the relationship 
 For multiple prerequisites, an exit can use `condition: {type:'requirements', requirements:[{item, state, value?, message?}], message}`. Each requirement is an item-state equality with default `value:true`. One unmet requirement uses its message; several use the group message. This special form belongs on exit blockers, not general prose predicates.
 
 Deferred movement is saved in `player.pendingAction`. `acknowledgeMessage` completes it; other actions are blocked while it is pending. Standing on a climbable object normally blocks movement until climbing down. An exit requirement for that object's `climbable.climbed` state is the supported elevated-route exception.
+
+### Naming report alternatives
+
+Give conditional report alternatives stable IDs, just as you name description variants. For an exit, the base fields provide the fallback:
+
+```json5
+hall: {
+  before: 'the closed doors lead to the ',
+  variants: [
+    { id: 'doorsOpen', before: 'the open doors lead to the ' },
+  ],
+},
+```
+
+Bind conditions by ID in the controller, and set the runtime priority there when alternatives overlap:
+
+```js
+game.registerScript('doorsAreOpen', ctx => ctx.state.player.doorsOpen === true);
+const exit = game.state.rooms.gallery.exits.hall;
+const catalog = new Map(exit.variants.map(variant => [variant.id, variant]));
+const open = catalog.get('doorsOpen');
+if (!open || catalog.size !== exit.variants.length) throw new Error('Invalid exit variants');
+exit.variants = [{ ...open, condition: { predicate: 'doorsAreOpen' } }];
+```
+
+The engine does not infer a condition from an ID. Named exit, NPC cue and mission variants still use their ordinary runtime selection semantics; they are not `game.describe` catalogs. A controller can compile authored names into ordered runtime entries without storing the authoring IDs in saves. Keep that order stable when saved report progress uses indexes. Random alternatives within a cue's `texts` array are a separate collection and need no condition for each sentence.
+
+Likewise, a `climbable.message` may contain named `{id, text}` alternatives. The controller attaches a condition to each selected runtime segment by ID; `buildConditionalText` renders the matching segments. Unlike entity `description`, report segments do not require a `default` ID. Keep plain strings for unconditional feedback. `climbed: false` is initial state, and `downMessage` and `movementBlockedMessage` are ordinary engine feedback, not game-specific rules.
 
 ## Object flags and inventory
 
