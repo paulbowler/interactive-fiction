@@ -18,6 +18,8 @@ Author worlds in JSON5 with flat capabilities, nested `items`, and `player.room`
 
 Descriptions may contain declarative conditions such as `itemState`, `hasItem`, `ownsItem`, `currentRoom`, `all`, `any` and `not`. Exceptional action effects and puzzle rules belong in JavaScript. Persisted data must be JSON-compatible; undefined values, functions, dates, accessors, cycles, non-finite numbers and unsafe object keys are rejected. Optional `schemaVersion` is 1; authoring syntax, package versions and save formats are independent.
 
+For the field-by-field feature families, supported controller configuration, and behavioral limits, see the [feature reference](feature-reference.md). For adding actions or capabilities, see [Extending the platform](extending.md).
+
 ## Game and actions
 
 `createGame(world, {seed})` clones the definition into independent `game.world` and mutable `game.state`. Treat `world` as read-only. The optional seed is a uint32. Register story scripts, then call `game.validateWorld(game.state)` to validate the configured world and references. Authoring initialization checks basic topology, key references, types and capabilities. Full configured-world validation is explicit because story modules may register scripts after construction.
@@ -32,7 +34,7 @@ Canonical types include `start`, `go`, `look`, `examine`, `examineClue`, `take`,
 - `examineClue.target`: `room-id:clue-id`.
 - `choose`/`tool`/`record`: zero-based `index`.
 - `chooseOption`: `choiceIndex` and `optionIndex`.
-- `submitInput`: `value`; `enterText`: target requiring input plus recorded note in `secondaryTarget`.
+- `submitInput`: `value`; `enterText`: recorded note in `target`, input device in `secondaryTarget`.
 
 Call `getAvailableActions(id)` and `getItemChoiceOptions(id,index)` for presentation. The dispatcher validates semantics independently of displayed options. Unsupported actions stop without mutation. `registerAction(type, synchronousHandler)` installs or overrides a standard handler and returns a restoration function. Nested dispatch is rejected; emit events for consequences instead.
 

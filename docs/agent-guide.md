@@ -4,7 +4,7 @@
 
 Create or maintain an independent game that consumes released platform packages. A game provides a declarative world, prose/assets and a JavaScript controller registering exceptional rules. Do not copy engine source into the game or modify `node_modules`.
 
-Start from `examples/study`. Read `docs/tutorial.md`, `docs/api.md` and the target game's existing rules/tests before changing mechanics. An existing playable game is the behavioral reference; preserve its IDs, meaningful state transitions, timings, prose and assets unless the task requests a change.
+Start from `examples/study`. Read `docs/tutorial.md`, `docs/feature-reference.md`, `docs/extending.md`, `docs/api.md` and the target game's existing rules/tests before changing mechanics. An existing playable game is the behavioral reference; preserve its IDs, meaningful state transitions, timings, prose and assets unless the task requests a change.
 
 ## Project contract
 

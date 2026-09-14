@@ -39,6 +39,8 @@ Write your world in `data/game.json5`. JSON5 supports comments, trailing commas,
 }
 ```
 
+For scenery, achievements, prose, navigation, notebooks, devices, actor missions and transport, see the [model and controller feature reference](feature-reference.md). It distinguishes authoring data from controller configuration and engine-maintained state.
+
 ## IDs and values
 
 Entity IDs are collection keys. Keep them stable for references, rules and saves. `brassKey` is an unquoted key; a kebab-case key must be quoted: `'brass-key'`. References are always strings, such as `key: 'brassKey'` and `room: 'study'`. Display names and prose are strings too. Use real booleans and numbers: `portable: true`, `weight: 3`.
