@@ -1,6 +1,9 @@
 {
   "entry": "src/main.js",
-  "world": "data/game.json",
-  "public": ["data", "assets"],
+  "world": "data/game.json5",
+  "public": [
+    "data",
+    "assets"
+  ],
   "outDir": "dist"
 }

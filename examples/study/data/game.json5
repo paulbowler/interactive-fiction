@@ -1,0 +1,66 @@
+{
+  id: 'quiet-study',
+  title: 'A Quiet Study',
+  startScreen: {
+    title: 'A Quiet Study',
+    text: [
+      'Find the letter in the wooden box.',
+    ],
+    imageUrl: './assets/study.svg',
+  },
+  clock: {
+    minutesPerTurn: 1,
+  },
+  player: {
+    room: 'study',
+  },
+  rooms: {
+    study: {
+      name: 'Study',
+      description: 'A wooden box rests beside a brass key.',
+      exits: {
+        hall: {
+          before: 'a doorway leads to the ',
+        },
+      },
+      items: {
+        'brass-key': {
+          name: 'Brass Key',
+          portable: true,
+        },
+        'wooden-box': {
+          name: 'Wooden Box',
+          container: true,
+          openable: true,
+          lockable: true,
+          locked: true,
+          key: 'brass-key',
+          items: {
+            letter: {
+              name: 'Letter',
+              description: 'Meet me at dusk.',
+              portable: true,
+            },
+          },
+        },
+        desk: {
+          name: 'Desk',
+          supporter: true,
+        },
+        statue: {
+          name: 'Statue',
+          fixed: true,
+        },
+      },
+      imageUrl: './assets/study.svg',
+    },
+    hall: {
+      name: 'Hall',
+      description: 'A quiet corridor.',
+      exits: {
+        study: {},
+      },
+      imageUrl: './assets/study.svg',
+    },
+  },
+}

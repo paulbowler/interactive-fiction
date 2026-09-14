@@ -1,6 +1,6 @@
 # Interactive Fiction
 
-Reusable JavaScript packages for standalone point-and-click games. **Version 1.0.0 · MIT · Node.js 22+ tooling · No runtime dependencies.**
+Reusable JavaScript packages for standalone point-and-click games. **Version 1.1.0 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
 
 | Package | Purpose |
 | --- | --- |
@@ -30,7 +30,7 @@ my-game/
   package.json             # pinned release dependencies
   package-lock.json        # exact versions and integrity hashes
   if.config.json           # inputs and output folder
-  data/game.json           # declarative world and prose
+  data/game.json5          # declarative world and prose
   assets/                  # images and other assets
   src/main.js              # initialize engine and view
   src/story.js             # register exceptional rules
@@ -49,14 +49,14 @@ export const browserView = mountBrowser(world => {
 });
 ```
 
-Ordinary taking, dropping, containers, locks, inventory and movement need world properties, not bespoke scripts. The [API guide](docs/api.md) describes the world schema and supported actions.
+Ordinary taking, dropping, containers, locks, inventory and movement need world properties, not bespoke scripts. See the [compact JSON5 world format](docs/world-model.md) and [API guide](docs/api.md).
 
 ## Install or upgrade a release
 
 Packages are distributed as npm-compatible archives on [GitHub Releases](https://github.com/paulbowler/interactive-fiction/releases). No npm registry account is needed to consume them. The template’s `.npmrc` permits its declared release URLs on npm 12 and later.
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.0.0/paulbowler-if-engine-1.0.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.0.0/paulbowler-if-browser-1.0.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.1.0/paulbowler-if-engine-1.1.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.1.0/paulbowler-if-browser-1.1.0.tgz
 ```
 
 For an upgrade, install both archives for the desired release, run the game's tests, rebuild and redeploy. Commit the updated package and lock files. Existing deployments keep their installed release until redeployed. Keep the previous `dist` or source/lockfile release to roll back.

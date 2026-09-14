@@ -6,6 +6,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
+const version=JSON.parse(await fs.readFile(path.join(root,'package.json'))).version;
 const run=(cmd,args,cwd)=>{const env={...process.env,npm_config_cache:path.join(os.tmpdir(),'if-package-test-cache')};delete env.NODE_TEST_CONTEXT;return execFileSync(cmd,args,{cwd,encoding:'utf8',env});};
 
 test('release archives install into an independent project, preserve saves and build offline',async t=>{
@@ -15,20 +16,25 @@ test('release archives install into an independent project, preserve saves and b
     run(process.execPath,[path.join(root,'scripts/pack-release.js'),artifacts],root);
     const game=path.join(temp,'game');await fs.cp(path.join(root,'examples/study'),game,{recursive:true,filter:p=>!p.includes('node_modules')&&!p.includes('/dist')});
     const pkg=JSON.parse(await fs.readFile(path.join(game,'package.json')));
-    for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-1.0.0.tgz`;
+    for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-${version}.tgz`;
     await fs.writeFile(path.join(game,'package.json'),JSON.stringify(pkg));
-    run('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund'],game);
+    run('npm',['install','--ignore-scripts','--no-audit','--no-fund'],game);
     run('npm',['test'],game);
     run('npm',['run','build'],game);
     const first=await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8');
     run('npm',['run','build'],game);
     assert.equal(await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8'),first,'Unchanged builds have the same cache identity');
     const built=JSON.parse(await fs.readFile(path.join(game,'dist/build-info.json')));
-    assert.equal(built.engine,'1.0.0');assert.equal(built.browser,'1.0.0');
+    assert.equal(built.engine,version);assert.equal(built.browser,version);
     const source=await fs.readFile(path.join(game,'dist/index.html'),'utf8');
     assert.ok(source.includes('type="importmap"'));assert.ok(source.includes('A Quiet Study'));
     assert.ok(first.includes('./assets/study.svg'));assert.ok(first.includes('./vendor/engine/src/serialization.js'));
     assert.ok(!first.includes('__ASSETS__'));
+    assert.ok(first.includes('./data/game.json'));
+    assert.ok(!first.includes('.json5'), 'Authoring source is not deployed');
+    assert.ok(!first.includes('node_modules/json5'), 'Parser is not deployed');
+    const compiled=JSON.parse(await fs.readFile(path.join(game,'dist/data/game.json')));
+    assert.equal(compiled.rooms.study.items['wooden-box'].properties.container.opened,false);
     await fs.appendFile(path.join(game,'assets/study.svg'),'\n');run('npm',['run','build'],game);
     assert.notEqual(await fs.readFile(path.join(game,'dist/service-worker.js'),'utf8'),first,'Assets invalidate the release cache');
     const {buildGame}=await import(pathToFileURL(path.join(game,'node_modules/@paulbowler/if-browser/build.js')));

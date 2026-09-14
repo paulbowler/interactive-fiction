@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- Compact JSON5 world authoring with flat capabilities and nested contents.
+- Public `normaliseWorld` and Node `loadWorld` with defaults and structural validation.
+- JSON5 compilation during standalone builds, with no deployed parser dependency.
+- Updated study template, tutorial, world reference and agent guide.
+- Compatible runtime schema and save format 1; added authoring and containment regressions.
+
 ## 1.0.0
 
 First release of the Interactive Fiction platform.

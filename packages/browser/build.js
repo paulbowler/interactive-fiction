@@ -1,4 +1,6 @@
 import fs from 'node:fs/promises';
+import JSON5 from 'json5';
+import { normaliseWorld } from '@paulbowler/if-engine';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +20,15 @@ async function listFiles(dir, prefix = '') {
         else if (entry.isFile()) files.push(`${prefix}${entry.name}`);
     }
     return files;
+}
+
+// JSON5 is authoring-only. Deployed clients load the compiled JSON model.
+export async function loadWorld(file) {
+    try {
+        return normaliseWorld(JSON5.parse(await fs.readFile(file, 'utf8')));
+    } catch (error) {
+        throw new Error(`Cannot load world ${file}: ${error.message}`, { cause: error });
+    }
 }
 
 export async function buildGame({ cwd = process.cwd(), configPath = 'if.config.json' } = {}) {
@@ -43,8 +54,13 @@ export async function buildGame({ cwd = process.cwd(), configPath = 'if.config.j
     const entry = config.entry || 'src/main.js';
     if (!entry.startsWith('src/') || !entry.endsWith('.js')) throw new Error('entry must be a JavaScript file beneath src/');
     await input(entry);
-    const worldPath = config.world || 'data/game.json';
-    const world = await json(await input(worldPath));
+    const worldPath = config.world || (await fs.stat(path.join(cwd, 'data/game.json5')).then(() => 'data/game.json5', error => {
+        if (error.code !== 'ENOENT') throw error;
+        return 'data/game.json';
+    }));
+    const world = await loadWorld(await input(worldPath));
+    const compiledPath = worldPath.replace(/\.json5$/, '.json');
+    if (!/\.json5?$/.test(worldPath)) throw new Error('World file must end in .json5 or .json');
     if (!world.title) throw new Error('Game world needs a title');
     const staging = await fs.mkdtemp(path.join(cwd, '.if-build-'));
     async function copy(from, relative) {
@@ -62,7 +78,10 @@ export async function buildGame({ cwd = process.cwd(), configPath = 'if.config.j
             if (!/^[a-zA-Z0-9_.-]+$/.test(relative) || ['src','vendor','node_modules',outputName,'index.html','service-worker.js','build-info.json'].includes(relative)) throw new Error(`Invalid public input: ${relative}`);
             await copy(await input(relative), relative);
         }
-        await fs.access(path.join(staging, worldPath));
+        // Keep the runtime URL stable while omitting the authoring source.
+        if (compiledPath !== worldPath) await fs.rm(path.join(staging, worldPath), {force:true});
+        await fs.mkdir(path.dirname(path.join(staging, compiledPath)), {recursive:true});
+        await fs.writeFile(path.join(staging, compiledPath), JSON.stringify(world, null, 2) + '\n');
         for (const [root, name] of [[engineRoot,'engine'],[browserRoot,'browser']]) {
             for (const relative of ['index.js','src','LICENSE']) await copy(path.join(root,relative),`vendor/${name}/${relative}`);
         }

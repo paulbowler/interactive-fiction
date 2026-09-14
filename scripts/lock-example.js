@@ -13,7 +13,7 @@ try {
     const local=structuredClone(original);
     for(const name of ['engine','browser'])local.dependencies[`@paulbowler/if-${name}`]=`file:${path.join(root,`release/paulbowler-if-${name}-${version}.tgz`)}`;
     await fs.writeFile(path.join(directory,'package.json'),JSON.stringify(local));
-    execFileSync('npm',['install','--package-lock-only','--ignore-scripts','--offline','--no-audit','--cache',path.join(os.tmpdir(),'if-example-lock-cache')],{cwd:directory,stdio:'pipe'});
+    execFileSync('npm',['install','--package-lock-only','--ignore-scripts','--no-audit','--cache',path.join(os.tmpdir(),'if-example-lock-cache')],{cwd:directory,stdio:'pipe'});
     const lock=JSON.parse(await fs.readFile(path.join(directory,'package-lock.json')));
     lock.packages[''].dependencies=original.dependencies;
     for(const name of ['engine','browser'])lock.packages[`node_modules/@paulbowler/if-${name}`].resolved=original.dependencies[`@paulbowler/if-${name}`];

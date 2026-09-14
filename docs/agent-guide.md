@@ -9,13 +9,13 @@ Start from `examples/study`. Read `docs/tutorial.md`, `docs/api.md` and the targ
 ## Project contract
 
 - Dependencies: pinned `@paulbowler/if-engine` and `@paulbowler/if-browser` release archives, with a committed lockfile. Prefer the versions already selected by the project.
-- `data/game.json`: schema-1 world, starting state, topology, capabilities and prose. No executable JavaScript or embedded effect programs.
+- `data/game.json5`: compact declarative world, starting state, topology, capabilities and prose. No executable JavaScript or embedded effect programs.
 - `src/story.js` or `src/logic/*.js`: explicit `register(game)` functions for exceptional rules and world reactions.
 - `src/main.js`: creates the engine, registers all controller modules and mounts the view.
 - `if.config.json`: names the source entry, world and public asset directories.
 - `dist/`: generated standalone deployment, never the source of truth.
 
-The supplied schema uses nested object collections, not flat `location` strings. Inventory is `state.player.carried` and `state.player.worn`, keyed by ID. Containers use `properties.container.items`; supporters are permanently open containers. Do not invent a different schema based on a conceptual example.
+Author flat capabilities (`portable: true`, `container: true`) and nested `items`; use `player.room` for the starting room. Do not add a `properties` wrapper or redundant empty collections. IDs used as values remain quoted strings. Read [world-model.md](world-model.md) for defaults, implications and validation. Runtime inventory is `state.player.carried` and `state.player.worn`; runtime containers use `properties.container.items`. Use `findItem` to query ownership, rather than adding competing location fields.
 
 ## Decide where behavior belongs
 
@@ -43,6 +43,6 @@ Before an engine dependency upgrade, preserve the existing lockfile/replay basel
 
 ## Suggested task prompt
 
-> Create a standalone game using the released Interactive Fiction platform. Start from the study template. Keep the engine as a dependency, ordinary world structure in JSON, exceptional behavior in registered JavaScript rules, and all runtime progress serializable. Implement the requested story, a meaningful action replay, save/restore coverage and a standalone build. Preserve the platform's existing action semantics and document any intentional deviations.
+> Create a standalone game using the released Interactive Fiction platform. Start from the study template. Keep the engine as a dependency, ordinary world structure in JSON5, exceptional behavior in registered JavaScript rules, and all runtime progress serializable. Implement the requested story, a meaningful action replay, save/restore coverage and a standalone build. Preserve the platform's existing action semantics and document any intentional deviations.
 
 When handing off, provide the project path, build/run commands, tests actually run, the selected engine release and any remaining limitations. Distinguish a built local site from a publicly deployed one.

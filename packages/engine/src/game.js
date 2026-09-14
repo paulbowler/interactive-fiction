@@ -1,3 +1,4 @@
+import { normaliseWorld } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
 import { createActions } from './actions.js';
 import { installDispatcher } from './dispatcher.js';
@@ -8,6 +9,7 @@ import { createScheduler } from './scheduler.js';
 // One isolated runtime per game. The authored world is never mutated.
 export function createGame(world, options = {}) {
 if (options.seed !== undefined && (!Number.isInteger(options.seed) || options.seed < 0 || options.seed > 0xffffffff)) throw new Error('Invalid random seed');
+world = normaliseWorld(world);
 let gameModel = cloneModel(world);
 validateRuntime(gameModel);
 let dispatching = false;

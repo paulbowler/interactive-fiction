@@ -19,13 +19,13 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v1.0.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v1.1.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 
 | File | What belongs there |
 | --- | --- |
-| `data/game.json` | Rooms, objects, starting state, prose, image paths and endings |
+| `data/game.json5` | Rooms, objects, starting state, prose, image paths and endings |
 | `src/story.js` | Exceptional story rules and reactions |
 | `src/main.js` | Create the game, register its rules, mount the view |
 | `if.config.json` | Which source/data/assets to include in the built site |
@@ -40,19 +40,19 @@ The ordinary actions are engine behavior. The example's small story controller r
 
 ## 4. Change your world's identity and prose
 
-In `data/game.json`, change `id` and `title` to identify your story. Keep the ID stable after publishing; saves belong to that identity. The string `version` is your story/save-compatibility version, not the installed engine version.
+In `data/game.json5`, change `id` and `title` to identify your story. Keep the ID stable after publishing; saves belong to that identity. The string `version` is your story/save-compatibility version, not the installed engine version.
 
 For example:
 
-```json
+```json5
 {
-  "id": "the-last-letter",
-  "title": "The Last Letter",
-  "version": "1"
+  id: "the-last-letter",
+  title: "The Last Letter",
+  version: "1",
 }
 ```
 
-Those fields are part of the existing world file, not a replacement for the rest of it. Also edit the start-screen title/text and room descriptions. Keep `items`, `player`, `rooms`, `startScreen`, `achievements` and `endings` present, even when their contents are empty.
+Those fields are part of the existing world file, not a replacement for the rest of it. Also edit the start-screen title/text and room descriptions. Only `title`, `player.room` and `rooms` are required. Omit empty collections and ordinary defaults; see the [world format guide](world-model.md).
 
 Rebuild with `npm run build` and reload your browser. The world version need not change for an engine upgrade or compatible prose edit. During development, use the game's Restart command when you want to discard the current saved playthrough and see changed initial state. The browser otherwise restores progress.
 
@@ -60,24 +60,22 @@ Rebuild with `npm run build` and reload your browser. The world version need not
 
 Add this entry inside `rooms.study.items`:
 
-```json
-"candle": {
-  "name": "Candle",
-  "description": "The wick has never been lit.",
-  "properties": {
-    "portable": true
-  }
-}
+```json5
+candle: {
+  name: "Candle",
+  description: "The wick has never been lit.",
+  portable: true,
+},
 ```
 
-Separate neighboring JSON entries with commas. Object IDs such as `candle` identify objects for rules and saves; display names are prose and can change. Every live object needs a unique ID.
+Separate neighboring entries with commas; JSON5 permits a trailing comma. Object IDs such as `candle` identify objects for rules and saves; display names are prose and can change. Every live object needs a unique ID.
 
 You can now take and drop the candle without writing any JavaScript. The engine understands portability, fixed objects, reachability and inventory. You do not need to add Take buttons yourself.
 
 Containment is represented by nesting. The letter already lives in:
 
 ```text
-rooms.study.items.wooden-box.properties.container.items.letter
+rooms.study.items.wooden-box.items.letter
 ```
 
 A closed box makes its contents inaccessible. Taking the letter moves it into `player.carried.letter`. Do not leave duplicate copies in the two collections.
@@ -86,17 +84,16 @@ A closed box makes its contents inaccessible. Taking the letter moves it into `p
 
 Add a room under `rooms`:
 
-```json
-"garden": {
-  "name": "Garden",
-  "description": "The path ends at a silent fountain.",
-  "imageUrl": "./assets/study.svg",
-  "exits": { "hall": {} },
-  "items": {}
-}
+```json5
+garden: {
+  name: "Garden",
+  description: "The path ends at a silent fountain.",
+  imageUrl: "./assets/study.svg",
+  exits: { hall: {} },
+},
 ```
 
-Then add `"garden": {}` to `rooms.hall.exits` alongside its existing study exit. Exits are keyed by destination room ID. Connections are directional; the garden's return exit is a separate definition.
+Then add `garden: {}` to `rooms.hall.exits` alongside its existing study exit. Exits are keyed by destination room ID. Connections are directional; the garden's return exit is a separate definition.
 
 The image is deliberately reused here. Replace it with your own local asset when ready. The builder verifies declared images are present and includes them in the offline release.
 
@@ -143,12 +140,12 @@ The existing example test must now take the candle before attempting the letter.
 
 An ending's prose and illustration belong in the world's `endings` array:
 
-```json
+```json5
 {
-  "id": "letter-delivered",
-  "title": "Delivered",
-  "text": ["At the fountain, you leave the letter where it will be found."],
-  "imageUrl": "./assets/study.svg"
+  id: "letter-delivered",
+  title: "Delivered",
+  text: ["At the fountain, you leave the letter where it will be found."],
+  imageUrl: "./assets/study.svg",
 }
 ```
 
@@ -167,7 +164,7 @@ The engine handles the ended state and the view renders the selected ending. You
 
 ## 9. Test your game without clicking through it
 
-The supplied `test.js` uses Node's built-in test runner. It loads the world, creates an engine and registers the same controller used by the browser.
+The supplied `test.js` uses Node's built-in test runner and `loadWorld` from `@paulbowler/if-browser/build` to parse JSON5. It loads the world, creates an engine and registers the same controller used by the browser.
 
 A simple action sequence looks like this:
 

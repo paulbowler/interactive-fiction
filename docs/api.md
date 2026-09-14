@@ -3,26 +3,24 @@
 ## Imports
 
 ```js
-import { createGame, CONTINUE, STOP, HANDLED,
+import { createGame, normaliseWorld, CONTINUE, STOP, HANDLED,
   ENGINE_VERSION, WORLD_SCHEMA_VERSION, SAVE_FORMAT_VERSION } from '@paulbowler/if-engine';
 import { mountBrowser, BROWSER_VERSION } from '@paulbowler/if-browser';
 ```
 
 No deep source imports are public. The engine has no DOM, Node or story dependency. The browser's `./build` export is Node-only; `./style.css` and `./template.html` expose presentation assets to other build tools.
 
-## World schema 1
+## World authoring and runtime schema
 
-The schema represents rooms, objects and containment with nested collections. Required top-level fields are `title`, string `version`, `rooms`, `items` (prototypes), `player`, `startScreen`, `achievements` and `endings`. A stable `id` is strongly recommended; worlds without an ID use their title. Optional `schemaVersion` defaults to 1. See the complete, runnable study world in `examples/study/data/game.json`.
+Author worlds in JSON5 with flat capabilities, nested `items`, and `player.room`. Only `title`, `player.room` and `rooms` are required. IDs and references remain strings; capabilities use booleans. Defaults supply empty collections, initial timing and ordinary open/locked state. See the [world-model guide](world-model.md) for the complete contract and `examples/study/data/game.json5` for a runnable example.
 
-Each room has a name, description, `exits` keyed by destination room ID, and `items` keyed by unique live object ID. Portable objects have `properties.portable: true`; fixed objects have `properties.fixed: true`. The player has a `currentRoom` and `carried`/`worn` object collections. `world.items` contains prototypes that scripts may instantiate later.
+`normaliseWorld(data)` clones and validates an authoring model into canonical runtime schema 1. `createGame` calls it automatically. Canonical world/state input is cloned unchanged; normalization is idempotent. Runtime objects use `properties`, containers use `properties.container.items`, doors use `properties.door`, and the player uses `currentRoom`. Ownership is the containing collection, with `findItem` providing a location query. No separate mutable location map is maintained.
 
-Containers use `properties.container` with `items`, `opened`, `openable`, `lockable`, `locked` and optional `key`. A supporter is a container with `supporter: true`, permanently `opened: true`, and no opening/locking capability. Nesting represents containment; an object's location is its owning collection. Doors use `properties.door`; exits can reference doors and generic blockers. Preserve these declarative relationships for graph inspection.
-
-Descriptions may contain conditional prose. Generic conditions such as `itemState`, `hasItem`, `ownsItem`, `currentRoom`, `all`, `any` and `not` are data, not executable scripts. Exceptional action effects and puzzle rules belong in JavaScript. All persisted data must be JSON-compatible; undefined values, functions, dates, accessors, cycles, non-finite numbers and unsafe object keys are rejected.
+Descriptions may contain declarative conditions such as `itemState`, `hasItem`, `ownsItem`, `currentRoom`, `all`, `any` and `not`. Exceptional action effects and puzzle rules belong in JavaScript. Persisted data must be JSON-compatible; undefined values, functions, dates, accessors, cycles, non-finite numbers and unsafe object keys are rejected. Optional `schemaVersion` is 1; authoring syntax, package versions and save formats are independent.
 
 ## Game and actions
 
-`createGame(world, {seed})` clones the definition into independent `game.world` and mutable `game.state`. Treat `world` as read-only. The optional seed is a uint32. Register story scripts, then call `game.validateWorld(game.state)` to validate the configured world and references. Initialization rejects non-JSON data and unsupported schema versions; full cross-reference validation is explicit because story modules may register scripts after construction.
+`createGame(world, {seed})` clones the definition into independent `game.world` and mutable `game.state`. Treat `world` as read-only. The optional seed is a uint32. Register story scripts, then call `game.validateWorld(game.state)` to validate the configured world and references. Authoring initialization checks basic topology, key references, types and capabilities. Full configured-world validation is explicit because story modules may register scripts after construction.
 
 `dispatch({type, actor:'player', target, secondaryTarget, ...})` is synchronous. Targets are IDs. Only player actor dispatch is supported. It returns `{action, status, success, messages, value, choices}`. `success` means a committed standard action or a handled replacement; a free query such as `look` returns its value without a successful mutation. Message entries contain `{type:'message', args:[text,title,...]}` for rendering by the view.
 
@@ -77,11 +75,13 @@ Browser automatic save selection also checks the story's string `version`. Keep 
 ```json
 {
   "entry":"src/main.js",
-  "world":"data/game.json",
+  "world":"data/game.json5",
   "public":["data","assets"],
   "outDir":"dist"
 }
 ```
+
+`loadWorld(file)` from the Node-only `./build` export parses JSON5 and returns a normalized model, with file/path diagnostics on failure. The builder writes the configured world to the same relative path with a `.json` extension and omits its `.json5` source. The default browser URL remains `./data/game.json`.
 
 Optional `template` and `styles` override defaults. Template placeholders are `{{title}}`, `{{release}}` and `{{entry}}`; `release` defaults to the world version. Keep the default template's DOM IDs for the standard view. The builder inserts the two package import mappings. Source imports must be relative ES modules or one of these two packages; this is a small copier/build tool, not an arbitrary npm bundler. Other bundlers can use the public entry points directly.
 

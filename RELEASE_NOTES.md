@@ -1,6 +1,8 @@
-# Interactive Fiction v1.0.0
+# Interactive Fiction v1.1.0
 
-This release provides two MIT-licensed packages:
+This release adds compact JSON5 worlds with flat capabilities, inferred defaults and a deterministic normalizer. Authoring errors identify invalid references and contradictory capabilities. The builder compiles JSON5 to ordinary JSON; the deployed browser needs no parser. Runtime schema and save format remain 1.
+
+The two MIT-licensed packages are:
 
 - `@paulbowler/if-engine`: reusable headless game engine.
 - `@paulbowler/if-browser`: browser view, default interface and standalone/offline site builder.
@@ -8,7 +10,7 @@ This release provides two MIT-licensed packages:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.0.0/paulbowler-if-engine-1.0.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.0.0/paulbowler-if-browser-1.0.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.1.0/paulbowler-if-engine-1.1.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.1.0/paulbowler-if-browser-1.1.0.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

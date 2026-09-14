@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { loadWorld } from '@paulbowler/if-browser/build';
 import { createGame } from '@paulbowler/if-engine';
 import { register } from './src/story.js';
-const world=JSON.parse(fs.readFileSync(new URL('./data/game.json',import.meta.url)));
+const world=await loadWorld(new URL('./data/game.json5',import.meta.url));
 const create=()=>{const game=createGame(world);register(game);return game;};
 test('letter discovery and delayed dusk survive a save',()=>{
     const game=create();

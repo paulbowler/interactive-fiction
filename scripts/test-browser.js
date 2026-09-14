@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { webkit } from 'playwright';
 const root=fileURLToPath(new URL('../',import.meta.url));
+const version=JSON.parse(await fs.readFile(path.join(root,'package.json'))).version;
 const temporary=await fs.mkdtemp(path.join(os.tmpdir(),'if-browser-test-'));
 const run=(cmd,args,cwd)=>execFileSync(cmd,args,{cwd,encoding:'utf8',env:{...process.env,npm_config_cache:path.join(os.tmpdir(),'if-browser-test-cache')}});
 let server,browser;
@@ -15,9 +16,9 @@ try {
     run(process.execPath,[path.join(root,'scripts/pack-release.js'),artifacts],root);
     const project=path.join(temporary,'study');await fs.cp(path.join(root,'examples/study'),project,{recursive:true,filter:p=>!p.includes('/node_modules')&&!p.includes('/dist')});
     const pkg=JSON.parse(await fs.readFile(path.join(project,'package.json')));
-    for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-1.0.0.tgz`;
+    for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-${version}.tgz`;
     await fs.writeFile(path.join(project,'package.json'),JSON.stringify(pkg));
-    run('npm',['install','--offline','--ignore-scripts','--no-audit','--no-fund'],project);
+    run('npm',['install','--ignore-scripts','--no-audit','--no-fund'],project);
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
     server=http.createServer(async(request,response)=>{

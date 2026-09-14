@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { loadWorld } from '../packages/browser/build.js';
 import { createGame } from '../packages/engine/index.js';
-const world=JSON.parse(fs.readFileSync(new URL('../examples/study.json',import.meta.url)));
+const world=await loadWorld(new URL('../examples/study.json5',import.meta.url));
 const fresh=()=>createGame(world);
 
 test('saves reject lossy values, cycles, accessors and unsafe keys',()=>{
