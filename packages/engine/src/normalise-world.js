@@ -22,6 +22,7 @@ export function normaliseWorld(definition) {
         for (const [key, feature] of Object.entries(room.scenery)) {
             if (!key.trim() || key.includes(':')) fail(`${path}.${key}`, 'expected a nonempty room-local ID without a colon');
             record(feature, `${path}.${key}`);
+            if (feature.name !== undefined && (typeof feature.name !== 'string' || !feature.name.trim())) fail(`${path}.${key}.name`, 'expected a nonempty string');
             if (feature.title !== undefined && typeof feature.title !== 'string') fail(`${path}.${key}.title`, 'expected a string');
         }
     }

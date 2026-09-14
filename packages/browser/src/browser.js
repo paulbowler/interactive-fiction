@@ -319,7 +319,7 @@ function appendProseText(parent, text) {
 function renderTextWithExamineLinks(container, text, clues) {
     container.innerHTML = '';
 
-    parseExamineLinks(text).forEach((part) => {
+    parseExamineLinks(text, clues).forEach((part) => {
         if (part.type === 'text') {
             appendProseText(container, part.text);
             return;

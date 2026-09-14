@@ -1,6 +1,6 @@
 {
   "name": "@paulbowler/if-engine",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Reusable interactive-fiction engine",
   "type": "module",
   "license": "MIT",

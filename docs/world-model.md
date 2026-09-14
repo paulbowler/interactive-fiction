@@ -41,7 +41,7 @@ Write your world in `data/game.json5`. JSON5 supports comments, trailing commas,
 
 For scenery, achievements, prose, navigation, notebooks, devices, actor missions and transport, see the [model and controller feature reference](feature-reference.md). It distinguishes authoring data from controller configuration and engine-maintained state.
 
-Room `scenery` is an optional dictionary of examinable features, such as a mural or notice. For example, `scenery: { mural: { title: 'Mural', description: 'A painted ship.' } }` pairs with the prose link `[[mural|mural]]`. Use ordinary `items` for objects that need actions such as opening or pushing. See the [scenery reference](feature-reference.md#presentation-and-discovery) for controller access and saved state.
+Room `scenery` is an optional dictionary of examinable features, such as a mural or notice. For example, `scenery: { mural: { name: 'mural', title: 'Mural', description: 'A painted ship.' } }` pairs with the prose link `[[mural]]`. Use ordinary `items` for objects that need actions such as opening or pushing. See the [scenery reference](feature-reference.md#presentation-and-discovery) for controller access and saved state.
 
 ## IDs and values
 

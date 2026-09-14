@@ -28,8 +28,8 @@ try {
         game.state.rooms.study.imageVariants[0].condition = {predicate:'duskIllustration'};`));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
-        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
-        .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural|mural]] covers the wall.'));
+        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
+        .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
     server=http.createServer(async(request,response)=>{

@@ -641,10 +641,10 @@ function buildConditionalText(description, separateSentences = false) {
         .reduce((text, part) => text + (separateSentences && /[.!?][”’"]?$/.test(text) && /^(?:\*\*|\[\[)?[A-Z]/.test(part) ? ' ' : '') + part, '');
 }
 
-function parseExamineLinks(text) {
+function parseExamineLinks(text, scenery = gameModel.rooms[gameModel.player.currentRoom]?.clues || {}) {
     text = String(text ?? '');
     const parts = [];
-    const linkPattern = /\[\[([^\]|]+)\|([^\]]+)\]\]|\*\*([^*]+)\*\*/g;
+    const linkPattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|\*\*([^*]+)\*\*/g;
     let lastIndex = 0;
     let match;
 
@@ -656,9 +656,11 @@ function parseExamineLinks(text) {
             });
         }
 
+        const key = match[2] ?? match[1];
+        const entity = key?.startsWith('item:') ? findItemInGameModel(key.slice(5)) : scenery[key];
         parts.push(match[3] !== undefined
             ? { type: 'accent', text: match[3] }
-            : { type: 'examine', text: match[1], clueKey: match[2] });
+            : { type: 'examine', text: match[2] === undefined ? (entity?.name || entity?.title || key) : match[1], clueKey: key });
 
         lastIndex = match.index + match[0].length;
     }
@@ -700,7 +702,7 @@ function showClueModal(clue, extraMessages = []) {
         ...extraMessages
     ].filter(Boolean);
 
-    displayMessageModal(messageParts.join(' '), clue.title || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
+    displayMessageModal(messageParts.join(' '), clue.title || clue.name || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
 }
 
 function examineClue(clue) {
@@ -714,7 +716,7 @@ function examineClue(clue) {
     const revealMessages = result.messages;
     commitMutation(result.ran && clue.onExamine?.consumesTurn === true);
     if (gameModel.player.gameOver) return;
-    displayMessageModal([description, ...revealMessages].filter(Boolean).join(' '), clue.title || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
+    displayMessageModal([description, ...revealMessages].filter(Boolean).join(' '), clue.title || clue.name || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
 }
 
 function runClueOnExamine(clue) {

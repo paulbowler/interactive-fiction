@@ -1,6 +1,6 @@
 # Model and controller feature reference
 
-This reference covers the built-in feature families in platform 1.4. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+This reference covers the built-in feature families in platform 1.5. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
 
 **Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered script IDs. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
 
@@ -40,7 +40,7 @@ This reference covers the built-in feature families in platform 1.4. Read [World
 | Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
 | Object `description`, `detail` | String or named-variant description and additional examination detail string |
-| Scenery `title`, `description` | Examination popup title and string or named-variant description; room scenery is examinable but cannot be carried |
+| Scenery `name`, `title`, `description` | Inline name, optional examination title (falls back to name), and string or named-variant description; room scenery is examinable but cannot be carried |
 
 Images are local project paths included by the build, such as `./assets/study.svg`. `imagePosition.x` accepts `left`, `center`/`centre`, `right`; `y` accepts `top`, `middle`/`center`/`centre`, `bottom`. Defaults center the image. Numeric percentages are not interpreted. The standard view uses start, room and ending images; storing an object image does not create a separate object-image interface automatically.
 
@@ -49,11 +49,11 @@ Entity `description` is a string or named alternatives with a required `default`
 ```json5
 {
   description: [
-    { id: 'default', text: 'A [[mural|mural]] covers the wall.' },
-    { id: 'lit', text: 'Light reveals a [[small plaque|item:plaque]] beside the [[mural|mural]].' },
+    { id: 'default', text: 'A [[mural]] covers the wall.' },
+    { id: 'lit', text: 'Light reveals a [[small plaque|item:plaque]] beside the [[mural]].' },
   ],
   scenery: {
-    mural: { title: 'The Mural', description: 'A painted ship approaches the shore.' },
+    mural: { name: 'mural', title: 'The Mural', description: 'A painted ship approaches the shore.' },
   },
 }
 ```
@@ -65,7 +65,7 @@ game.describe('gallery', ctx =>
 
 Other conditional prose fields accept strings or arrays of strings and `{condition, text}` segments. All matching segments concatenate in order; preserve spaces between them. Entity descriptions also accept these segment arrays, but named alternatives must not contain conditions or mix with segments. Start/end screen `text` arrays are **paragraphs**; use a nested segment array for a conditional paragraph.
 
-In room/examination prose, `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
+In room/examination prose, `[[sceneryID]]` displays the current scenery `name`, falling back to `title` and then the ID. Capitalization is used exactly as authored. `[[item:objectID]]` uses the object name. `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
 
 Room `scenery` contains examinable features such as murals, windows and notices. A feature need not reveal a clue. Its ID is local to its room; use `roomID:sceneryID` for description resolvers. Omit the collection when there are no features. Do not declare both `scenery` and `clues` in one room.
 

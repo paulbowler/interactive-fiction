@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0
+
+- ID-only inline scenery and item links resolve labels from current entity names.
+- Explicit labels remain available; popup titles can differ from inline names.
+- Validate scenery names and preserve supplied room context, saves and existing markup.
+
 ## 1.4.0
 
 - Author examinable room features in a `scenery` collection, with room-local IDs and named descriptions.
