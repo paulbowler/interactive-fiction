@@ -85,7 +85,7 @@ For scenery with ordinary actions (opening a window, pushing a statue), declare 
 | `listed` | Boolean; `false` omits this exit from the automatic list, without removing the connection |
 | `visibleWhen` | Condition; false prevents both listing and travel |
 | `condition` | **Blocking** condition: a true ordinary condition blocks travel with its `message` |
-| `variants` | Display alternatives with optional `id`, `before`, `after`, `label`. The controller supplies conditions and runtime priority; the first matching variant wins. Does not replace the base travel checks. |
+| `variants` | **Controller configuration.** Ordered display alternatives with optional `id`, `before`, `after`, `label` and a condition; first match wins. Keep the wording in named model prose. Does not replace the base travel checks. |
 | `successMessage`, `successTitle` | Travel feedback; title defaults to `Done` for immediate movement |
 | `deferMoveUntilMessageClosed` | Boolean; delays successful movement until feedback is acknowledged |
 | `beforeMove` | `{condition?, message, title?}`; an acknowledged pre-travel message, default title `Before Moving` |
@@ -118,31 +118,36 @@ Deferred movement is saved in `player.pendingAction`. `acknowledgeMessage` compl
 
 ### Naming report alternatives
 
-Give conditional report alternatives stable IDs, just as you name description variants. For an exit, the base fields provide the fallback:
+Keep initial exit wording on the exit. Put alternative text in a named prose catalog; that catalog contains strings or lists of strings, with no selection conditions, variant records or timing settings:
 
 ```json5
-hall: {
-  before: 'the closed doors lead to the ',
-  variants: [
-    { id: 'doorsOpen', before: 'the open doors lead to the ' },
-  ],
-},
+{
+  // Other world fields omitted here.
+  rooms: {
+    gallery: {
+      exits: { hall: { before: 'the closed doors lead to the ' } },
+    },
+  },
+  prose: {
+    openHallDoors: 'the open doors lead to the ',
+  },
+}
 ```
 
-Bind conditions by ID in the controller, and set the runtime priority there when alternatives overlap:
+Construct the runtime alternatives in the controller, where the condition and selection priority belong:
 
 ```js
 game.registerScript('doorsAreOpen', ctx => ctx.state.player.doorsOpen === true);
-const exit = game.state.rooms.gallery.exits.hall;
-const catalog = new Map(exit.variants.map(variant => [variant.id, variant]));
-const open = catalog.get('doorsOpen');
-if (!open || catalog.size !== exit.variants.length) throw new Error('Invalid exit variants');
-exit.variants = [{ ...open, condition: { predicate: 'doorsAreOpen' } }];
+game.state.rooms.gallery.exits.hall.variants = [{
+  id: 'doorsOpen',
+  condition: { predicate: 'doorsAreOpen' },
+  before: game.state.prose.openHallDoors,
+}];
 ```
 
-The engine does not infer a condition from an ID. Named exit, NPC cue and mission variants still use their ordinary runtime selection semantics; they are not `game.describe` catalogs. A controller can compile authored names into ordered runtime entries without storing the authoring IDs in saves. Keep that order stable when saved report progress uses indexes. Random alternatives within a cue's `texts` array are a separate collection and need no condition for each sentence.
+The engine does not infer a condition from an ID or resolve prose-key strings automatically: controller JavaScript reads the catalog explicitly. Exit, NPC cue and mission variants use their ordinary runtime selection semantics; they are not `game.describe` catalogs. Keep runtime ordering stable when saved report progress uses indexes. Random sentence alternatives can remain simple lists of prose in the model; the controller assigns them to a cue's runtime `texts` or `repeatTexts` fields.
 
-Likewise, a `climbable.message` may contain named `{id, text}` alternatives. The controller attaches a condition to each selected runtime segment by ID; `buildConditionalText` renders the matching segments. Unlike entity `description`, report segments do not require a `default` ID. Keep plain strings for unconditional feedback. `climbed: false` is initial state, and `downMessage` and `movementBlockedMessage` are ordinary engine feedback, not game-specific rules.
+Apply the same separation to conditional action feedback: store named messages in model prose, then construct conditional `climbable.message` segments in the controller. `buildConditionalText` renders matching runtime segments. Unlike entity `description`, report segments do not require a `default` ID. Plain unconditional feedback and initial state can remain on the object: `climbed: false`, `downMessage` and `movementBlockedMessage` do not select behavior.
 
 ## Object flags and inventory
 
@@ -388,7 +393,7 @@ Reports are stored in player movement cues. Explicit mission reports supersede i
 | `destinations` | Dictionary keyed by mission ID; each entry needs a `room` and positive integer `searchTurns` |
 | Destination availability | `condition` gates starting; `repeatWhen` permits repeating a completed destination |
 | Destination prose | `departure`, `departureReply`, `arrival`, `finished`: arrays of varied report strings |
-| Destination `variants` | First matching conditional override for visit duration, arrival/finished prose and configured effects; each variant supplies a positive integer `searchTurns` |
+| Destination `variants` | **Controller configuration.** First matching conditional override for visit duration, arrival/finished prose and configured effects; each variant supplies a positive integer `searchTurns` |
 | `homeReport`, `blockedReport` | Varied report arrays |
 | `sounds` | Room-keyed varied ambient report arrays |
 
