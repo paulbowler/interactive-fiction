@@ -86,10 +86,10 @@ async function loadGameModel() {
         gameModel = shouldUseSavedModel(parsedSavedModel, configuredModel) ? parsedSavedModel : cloneModel(configuredModel);
         game.load(gameModel);
         gameModel = game.state;
-        syncSavedPresentation(gameModel, freshModel);
+        syncSavedPresentation(gameModel, configuredModel);
 
-        imagePreloadComplete = isImagePreloadAvailable() ? collectGameImageUrls(freshModel).length === 0 : true;
-        imagePreloadState = { loaded: 0, total: collectGameImageUrls(freshModel).length };
+        imagePreloadComplete = isImagePreloadAvailable() ? collectGameImageUrls(configuredModel).length === 0 : true;
+        imagePreloadState = { loaded: 0, total: collectGameImageUrls(configuredModel).length };
         normalizePlayerState();
         updateView();
         preloadGameImages(gameModel, updateImagePreloadProgress).then(() => {

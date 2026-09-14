@@ -86,7 +86,7 @@ Browser automatic save selection also checks the story's string `version`. Keep 
 
 ## Browser and build
 
-`mountBrowser(factory,{worldUrl='./data/game.json',serviceWorkerUrl='./service-worker.js',autoStart=true,clockLabel='Elapsed time'})` returns a view. The factory receives fetched world data and must return a configured game. Default startup waits for window load, or schedules startup if load already completed; it does not replace `window.onload`. Use `autoStart:false` and `await view.start()` for explicit lifecycle control. `view.ready` exposes the startup promise once begun. Startup failures show a visible error; the promise completes after handling that error. One view mounts per document.
+`mountBrowser(factory,{worldUrl='./data/game.json',serviceWorkerUrl='./service-worker.js',autoStart=true,clockLabel='Elapsed time'})` returns a view. The factory receives fetched world data and must return a configured game. Room image refresh and preloading use the factory’s configured state, including controller-registered image conditions. Default startup waits for window load, or schedules startup if load already completed; it does not replace `window.onload`. Use `autoStart:false` and `await view.start()` for explicit lifecycle control. `view.ready` exposes the startup promise once begun. Startup failures show a visible error; the promise completes after handling that error. One view mounts per document.
 
 `view.game`, `initialModel`, `updateView`, `saveGameModel`, popup methods and image collection helpers support hosts and tests. Browser focus and animation state is presentation-only. Essential deferred movement resides in the game save and completes via `acknowledgeMessage`.
 

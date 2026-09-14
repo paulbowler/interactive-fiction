@@ -19,6 +19,14 @@ try {
     for(const name of ['engine','browser'])pkg.dependencies[`@paulbowler/if-${name}`]=`file:../release/paulbowler-if-${name}-${version}.tgz`;
     await fs.writeFile(path.join(project,'package.json'),JSON.stringify(pkg));
     run('npm',['install','--ignore-scripts','--no-audit','--no-fund'],project);
+    // A controller supplies a predicate for an authored image alternative.
+    const storyFile=path.join(project,'src/story.js');
+    const story=await fs.readFile(storyFile,'utf8');
+    await fs.writeFile(storyFile,story.replace('export function register(game) {', `export function register(game) {
+        game.registerScript('duskIllustration', ctx => ctx.state.player.dusk === true);
+        game.state.rooms.study.imageVariants[0].condition = {predicate:'duskIllustration'};`));
+    const worldFile=path.join(project,'data/game.json5');
+    await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8')).replace("name: 'Study',", "name: 'Study', imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],"));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
     server=http.createServer(async(request,response)=>{
@@ -38,6 +46,7 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/demo/`);
     await page.locator('#start-game-button').click();
     assert.equal(await page.locator('#room-name').textContent(),'Study');
+    assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'center center');
     const action=async(region,item,label)=>{
         await page.locator(region).getByRole('button',{name:item,exact:true}).click();
         await page.locator('#item-actions').getByRole('button',{name:label,exact:true}).click();
@@ -55,6 +64,8 @@ try {
         return browserView.game.save();
     });
     assert.ok((await state()).player.dusk);
+    assert.equal((await state()).rooms.study.imageVariants[0].condition.predicate,'duskIllustration');
+    assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
     await page.evaluate(()=>navigator.serviceWorker.ready);
@@ -66,6 +77,8 @@ try {
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.dusk);
+    assert.equal((await state()).rooms.study.imageVariants[0].condition.predicate,'duskIllustration');
+    assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok(await page.locator('#room-image').evaluate(img=>img.complete&&img.naturalWidth>0));
     assert.deepEqual(errors,[]);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Preserve controller-configured room image conditions during browser startup and save restoration.
+- Preload images from the configured model.
+- Browser regression covers conditional images through state changes and offline reload.
+
 ## 1.2.0
 
 - One `description` field for plain text or named variants, with a required default.

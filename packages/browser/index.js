@@ -1,2 +1,2 @@
 export { mountBrowser } from './src/browser.js';
-export const BROWSER_VERSION = '1.2.0';
+export const BROWSER_VERSION = '1.2.1';
