@@ -34,8 +34,8 @@ This reference covers the built-in feature families in platform 1.5. Read [World
 | `startScreen.imageUrl`, `imagePosition` | Opening illustration and crop alignment |
 | Room `name`, `description` | Display name and string or named-variant description |
 | Room `items`, `exits`, `scenery` | Dictionaries keyed by stable IDs; exits are keyed by destination room |
-| Room `cues` | Conditional prose shown with current observations |
-| Room `observations` | Array of `{condition, text}`; report a false-to-true condition change across the current turn's scheduler update, while the player stays in that room |
+| Room `cues` | **Controller configuration.** Conditional prose shown with current observations; source each passage from named model prose |
+| Room `observations` | **Controller configuration.** Array of `{condition, text}`; report a false-to-true condition change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
 | Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
@@ -145,9 +145,36 @@ game.state.rooms.gallery.exits.hall.variants = [{
 }];
 ```
 
-The engine does not infer a condition from an ID or resolve prose-key strings automatically: controller JavaScript reads the catalog explicitly. Exit, NPC cue and mission variants use their ordinary runtime selection semantics; they are not `game.describe` catalogs. Keep runtime ordering stable when saved report progress uses indexes. Random sentence alternatives can remain simple lists of prose in the model; the controller assigns them to a cue's runtime `texts` or `repeatTexts` fields.
+The engine does not infer a condition from an ID or resolve prose-key strings automatically: controller JavaScript reads the catalog explicitly. Exit, NPC cue and mission variants use their ordinary runtime selection semantics; they are not `game.describe` catalogs. Keep runtime ordering stable when saved report progress uses indexes. For individually addressable cue, observation and sound passages, give each string a key in model prose. The controller assembles runtime arrays from those names in the intended order. An array position is not a persistent authoring ID.
 
 Apply the same separation to conditional action feedback: store named messages in model prose, then construct conditional `climbable.message` segments in the controller. `buildConditionalText` renders matching runtime segments. Unlike entity `description`, report segments do not require a `default` ID. Plain unconditional feedback and initial state can remain on the object: `climbed: false`, `downMessage` and `movementBlockedMessage` do not select behavior.
+
+### Named cues, observations and sounds
+
+A cue describes a currently true condition. An observation reports a condition becoming true during a turn's scheduler update. An ambient sound is selected from the relevant room's sound list, using saved random state. Keep those three behaviors separate in controller code, while their wording remains named data:
+
+```json5
+prose: {
+  torchAbove: 'A torch beam crosses the landing.',
+  guardBoardsLift: 'The guard steps into the lift.',
+  echoingSteps: 'Radio: Footsteps echo across the marble.',
+  squeakingSole: 'Radio: A sole squeaks on the polished floor.',
+},
+```
+
+After registering the predicates in JavaScript, configure the runtime:
+
+```js
+const room = game.state.rooms.gallery;
+room.cues = [{condition: {predicate: 'guardAbove'}, text: game.state.prose.torchAbove}];
+room.observations = [{condition: {predicate: 'guardInLift'}, text: game.state.prose.guardBoardsLift}];
+const guard = game.findItem('guard').item;
+guard.properties.npc.missions.sounds = {
+  gallery: [game.state.prose.echoingSteps, game.state.prose.squeakingSole],
+};
+```
+
+Keep array order in the controller stable to preserve cue priority, observation order and seeded sound selection. Reordering keys in the prose dictionary has no effect. These runtime collections do not belong in the JSON5 world model.
 
 ## Object flags and inventory
 
@@ -395,25 +422,71 @@ Reports are stored in player movement cues. Explicit mission reports supersede i
 | Destination prose | `departure`, `departureReply`, `arrival`, `finished`: arrays of varied report strings |
 | Destination `variants` | **Controller configuration.** First matching conditional override for visit duration, arrival/finished prose and configured effects; each variant supplies a positive integer `searchTurns` |
 | `homeReport`, `blockedReport` | Varied report arrays |
-| `sounds` | Room-keyed varied ambient report arrays |
+| `sounds` | **Controller configuration.** Room-keyed ambient report arrays assembled from named prose; preserve order for seeded variation and saved history |
 
 Start with `game.startMission({item:'courier', destination:'inspectGarden', force:false})` inside a committed interaction. Returns false when unavailable or unreachable. `force` bypasses active/completed restrictions, not destination conditions or missing routes. Starting removes the actor's item timer. Saved `npc.mission` holds `active`, `destination`, `phase`, countdown and transport ride; `npc.completed` records completed destinations. Completion occurs after searching, before returning home. A state change away from the expected phase interrupts the mission. Without a route, it reports blockage and returns to idle state without teleporting home.
 
 ### Transport
 
-A controller object has `transport:{room, stops, currentFloor, doorsOpen, phase, queue, notices?}`. `room` identifies the cabin room; `stops` is keyed by landing room ID, `currentFloor` names one stop, `doorsOpen` is boolean, `phase` is `'idle'` or `'moving'`, and `queue` starts as `[]`. These structured transport fields currently need explicit initial values; ordinary collection defaults do not fill them.
+Transport is an independent entity in the model's optional `transports` dictionary. Its `space` identifies where occupants belong. A control panel, button, pilot or rule may request a journey; none owns the journey state.
+
+```json5
+transports: {
+  ferry: {
+    name: 'River Ferry',
+    space: { room: 'ferryDeck' },
+    stop: 'west',
+    stops: {
+      west: { room: 'westBank' },
+      east: { room: 'eastBank' },
+    },
+  },
+},
+```
+
+Declare `ferryDeck`, `westBank` and `eastBank` as ordinary rooms. Put occupants and cargo in the deck's normal collections; do not also list passengers on the transport. A stop ID is a persistent reference, independent of its room ID and display name.
+
+| Field | Meaning |
+| --- | --- |
+| `name` | Optional display name |
+| `space` | Required `{room: 'roomId'}` boarding space |
+| `stops` | Nonempty dictionary of named stops, each with `{room: 'roomId'}` |
+| `stop` | Required initial/current stop ID; remains the origin while travelling |
+| `boardingOpen` | Whether boarding/leaving is possible while idle; defaults to `true` |
+| `blockedMessage` | Optional model text used when the boarding connection is unavailable |
+| `phase` | Runtime `'idle'` or `'moving'`; initially `'idle'` |
+| `queue` | Runtime FIFO request list; initially empty |
+| `request` | Active journey request, present while moving |
+| `dwell` | Runtime countdown before another request can begin |
+
+Currently **only room-backed spaces are supported**. `{object: 'boat'}` and supporter-backed riding are rejected explicitly. A container or supporter does not implicitly permit player boarding. Boats, trains and spacecraft can use an ordinary interior room today; object boarding can be added without changing the transport's identity or request API.
+
+Normalization creates inspectable two-way exit definitions between the boarding space and each stop room. Existing exit prose and controller restrictions are retained. The engine permits crossing only when idle, boarding is open and the transport is at that stop. Unavailable exits from inside the boarding space are hidden; an external boarding exit remains available to display its blocker message. Controller rules can add restrictions but cannot bypass the ordinary transport availability check through an exit condition.
+
+Control behavior belongs in JavaScript. Within a committed interaction, request a journey:
 
 ```js
-game.requestTransport({
-  item: 'liftController', destination: 'upperLanding', actor: 'player', dwell: 1,
+const accepted = game.requestTransport({
+  transport: 'ferry', destination: 'east', actor: 'player', dwell: 1,
 });
 ```
 
-Requests support `condition` and registered `effects` for arrival. Duplicate actor/destination requests are rejected. Queued conditions are checked again when selected. Departing closes doors and sets moving; the next transport update arrives and opens them. Stop-configured effects run at departure toward that stop. Arrival callbacks run only if their condition still holds. Dwell delays selection of another request; entering/leaving the cabin holds open doors for that action.
+This returns whether the request was accepted; it does not dispatch a player action or consume a turn by itself. A button handler still enters through `game.dispatch`. Unknown transport/stop/actor references and invalid dwell values are rejected. Duplicate actor/destination requests are rejected. Requests may include registered `condition` and arrival `effects`; these belong in controller configuration. Queued conditions are checked again when selected.
 
-`transport.notices` maps `departure`, `arrival`, `opening` to arrays of `{room, condition?, text}`. Only notices for the player's current room are reported. Saved `request`, `queue`, `dwell`, `phase`, `doorsOpen` and `currentFloor` fully identify transport progress. Story rules/configured effects must maintain the cabin's actual exit connections; the transport state machine does not infer an entire lift topology.
+The next eligible transport update begins departure, closes boarding and sets `phase: 'moving'`. The following transport update arrives, opens boarding and sets `stop`. A same-stop request opens boarding without starting a journey. `dwell` delays selection of another request. Entering the boarding room holds it for the current action. Boarding and NPC destination selection remain separate turns.
 
-A mission route edge with `transport:'liftController'` uses physical waiting → ready → boarded → riding stages. Boarding and choosing a destination occupy separate updates. The actor actually enters the cabin room; player interference can delay its trip.
+Use `game.getTransport('ferry')` to inspect current state. Reacquire it after `game.load`; saves contain the complete request, queue, phase and dwell state. Invalid spaces, duplicate entity IDs, shared boarding rooms, invalid stops, broken boarding connections and malformed journey state fail validation.
+
+Events publish facts after transitions:
+
+- `transportDeparted`: `{transport, from, destination, actor}`; stop fields are stop IDs.
+- `transportArrived`: `{transport, stop, actor}`; emitted for a completed journey.
+
+Transport updates precede item timers, actor missions and scheduled events. Event handlers may react or enqueue future requests; they should not manually advance transport updates.
+
+For automatic feedback, controllers can configure `transport.notices`: `departure`, `arrival` and `opening` arrays of `{room, condition?, text}`. Read every passage from named model prose. Only notices for the player's current room are reported. Stop-specific `effects` execute at departure; request `effects` execute at arrival only if their condition still holds. These are optional controller facilities, not required world-model fields.
+
+A mission route edge `{to: 'eastBank', transport: 'ferry'}` uses physical waiting → ready → boarded → riding stages. Route endpoints remain room IDs; the engine maps them to stop IDs. Actors enter the same boarding room as the player. Player interference can delay a trip; it does not teleport the actor.
 
 ## Mutable state and model helpers
 

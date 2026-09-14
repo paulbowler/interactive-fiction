@@ -1,6 +1,23 @@
+import { transportRoom, transportStop, transportOpen, setTransportStop, setTransportOpen, transportStopRoom, transportStopAt } from './transports.js';
 // Existing transport and NPC mission state machines. Every phase, queue,
 // countdown and boarding stage lives in serializable runtime state.
 export function createWorldEvents(runtime) {
+function getTransport(id) {
+    if (typeof id !== 'string') return undefined;
+    const transports = runtime.state.transports;
+    return transports && Object.hasOwn(transports,id) ? transports[id] : runtime.findItemInGameModel(id)?.properties?.transport;
+}
+function transportEntries() {
+    const entries = Object.entries(runtime.state.transports || {}).map(([id, transport]) => ({id,transport}));
+    const items = [];
+    runtime.getAllRootItemCollections().forEach(collection => runtime.collectItemsInCollection(collection,
+        item => Boolean(item.properties?.transport), items));
+    return [...entries, ...items.map(({key,item}) => ({id:key, transport:item.properties.transport}))];
+}
+function transportConnectionOpen(link) {
+    const t = getTransport(link.id);
+    return Boolean(t && t.phase === 'idle' && transportOpen(t) && transportStop(t) === link.stop);
+}
 function getMissionRoute(config, from, to) {
     const queue = [{ room: from, path: [] }];
     const seen = new Set([from]);
@@ -55,34 +72,34 @@ function finishMission(key, npc) {
 
 function advanceMissionTransport(key, npc, edge, room) {
     const mission = npc.mission;
-    const transport = runtime.findItemInGameModel(edge.transport)?.properties?.transport;
+    const transport = getTransport(edge.transport);
     if (!transport) return;
     if (!mission.ride) {
         mission.ride = { edge: runtime.cloneModel(edge), origin: room, stage: 'waiting' };
-        requestTransport({ item: edge.transport, destination: room, actor: key, dwell: 1 });
+        requestTransport({ transport: edge.transport, destination: transportStopAt(transport, room), actor: key, dwell: 1 });
         return;
     }
     const ride = mission.ride;
-    const stopped = floor => transport.phase === 'idle' && transport.doorsOpen && transport.currentFloor === floor;
+    const stopped = room => transport.phase === 'idle' && transportOpen(transport) && transportStopRoom(transport, transportStop(transport)) === room;
     if (ride.stage === 'waiting' && stopped(ride.origin)) {
         ride.stage = 'ready';
         transport.dwell = Math.max(transport.dwell || 0, 1);
     } else if (ride.stage === 'ready' && !stopped(ride.origin)) {
         ride.stage = 'waiting';
     } else if (ride.stage === 'ready' && stopped(ride.origin)) {
-        runtime.moveItem(key, runtime.state.rooms[transport.room].items);
+        runtime.moveItem(key, runtime.state.rooms[transportRoom(transport)].items);
         ride.stage = 'boarded';
-        // Boarding and pressing a floor button are separate turns.
+        // Boarding and requesting a destination are separate turns.
         transport.dwell = Math.max(transport.dwell || 0, 1);
     } else if (ride.stage === 'boarded') {
-        requestTransport({ item: edge.transport, destination: edge.to, actor: key, dwell: 1 });
+        requestTransport({ transport: edge.transport, destination: transportStopAt(transport, edge.to), actor: key, dwell: 1 });
         ride.stage = 'riding';
     } else if (ride.stage === 'riding' && stopped(edge.to)) {
         runtime.moveItem(key, runtime.state.rooms[edge.to].items);
         delete mission.ride;
     } else if (ride.stage === 'waiting' && transport.phase === 'idle' && !transport.queue?.length) {
-        // A player may take the car before boarding; call it back instead of teleporting.
-        requestTransport({ item: edge.transport, destination: ride.origin, actor: key, dwell: 1 });
+        // A player may depart before boarding; request its return instead of teleporting.
+        requestTransport({ transport: edge.transport, destination: transportStopAt(transport, ride.origin), actor: key, dwell: 1 });
     }
 }
 
@@ -141,9 +158,12 @@ function advanceMissions() {
     }
 }
 
-function requestTransport(effect) {
-    const transport = runtime.findItemInGameModel(effect.item)?.properties?.transport;
-    if (!transport?.stops?.[effect.destination] || (effect.condition && !runtime.evaluateCondition(effect.condition))) return false;
+function requestTransport(effect = {}) {
+    if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return false;
+    const transport = getTransport(effect.transport ?? effect.item);
+    if (!transport || typeof effect.destination !== 'string' || !Object.hasOwn(transport.stops, effect.destination) || (effect.condition && !runtime.evaluateCondition(effect.condition))) return false;
+    if (effect.dwell !== undefined && (!Number.isSafeInteger(effect.dwell) || effect.dwell < 0)) return false;
+    if (effect.actor && effect.actor !== 'player' && !runtime.findItem(effect.actor)) return false;
     transport.queue ||= [];
     const actor = effect.actor || 'player';
     const duplicate = request => request?.destination === effect.destination && request.actor === actor;
@@ -162,34 +182,27 @@ function recordTransportNotice(transport, event) {
     }
 }
 
-// Crossing an open threshold holds the car for this action, without cancelling requests.
+// Entering an open boarding space holds it for this action without cancelling requests.
 
 function holdTransportForBoarding(room) {
-    const controllers = [];
-    runtime.getAllRootItemCollections().forEach(items => runtime.collectItemsInCollection(items,
-        item => item.properties?.transport?.room === room, controllers));
-    for (const { item } of controllers) {
-        const transport = item.properties.transport;
-        if (transport.phase === 'idle' && transport.doorsOpen) transport.dwell = Math.max(transport.dwell || 0, 1);
+    for (const {transport} of transportEntries().filter(({transport}) => transportRoom(transport) === room)) {
+        if (transport.phase === 'idle' && transportOpen(transport)) transport.dwell = Math.max(transport.dwell || 0, 1);
     }
 }
 
 function advanceTransports() {
-    const controllers = [];
-    runtime.getAllRootItemCollections().forEach(items => runtime.collectItemsInCollection(items,
-        item => Boolean(item.properties?.transport), controllers));
-    for (const { item } of controllers) {
-        const transport = item.properties.transport;
+    for (const {id,transport} of transportEntries()) {
         if (transport.phase === 'moving') {
             const request = transport.request;
-            transport.currentFloor = request.destination;
+            setTransportStop(transport, request.destination);
             transport.phase = 'idle';
-            transport.doorsOpen = true;
+            setTransportOpen(transport, true);
             transport.dwell = request.dwell;
             // Retain the request while callbacks and observation conditions run.
             if (!request.condition || runtime.evaluateCondition(request.condition)) (request.effects || []).forEach(runtime.performEffect);
             recordTransportNotice(transport, 'arrival');
             delete transport.request;
+            if (transport.space) runtime.events.emit('transportArrived', {transport:id, stop:transport.stop, actor:request.actor});
             continue;
         }
         if (transport.dwell > 0) { transport.dwell--; continue; }
@@ -200,19 +213,20 @@ function advanceTransports() {
         }
         if (!request) continue;
         transport.request = request;
-        if (transport.currentFloor === request.destination) {
-            const wasOpen = transport.doorsOpen;
-            transport.doorsOpen = true;
+        if (transportStop(transport) === request.destination) {
+            const wasOpen = transportOpen(transport);
+            setTransportOpen(transport, true);
             transport.dwell = request.dwell;
             (request.effects || []).forEach(runtime.performEffect);
             if (!wasOpen) recordTransportNotice(transport, 'opening');
             delete transport.request;
             continue;
         }
-        transport.doorsOpen = false;
+        setTransportOpen(transport, false);
         transport.phase = 'moving';
         (transport.stops[request.destination].effects || []).forEach(runtime.performEffect);
         recordTransportNotice(transport, 'departure');
+        if (transport.space) runtime.events.emit('transportDeparted', {transport:id, from:transport.stop, destination:request.destination, actor:request.actor});
     }
 }
 
@@ -254,5 +268,5 @@ function advanceTimers() {
         }
     });
 }
-return { getMissionRoute, emitNpcReport, startMission, finishMission, advanceMissionTransport, advanceMissions, requestTransport, recordTransportNotice, holdTransportForBoarding, advanceTransports, startTimer, advanceTimers };
+return { getTransport, transportConnectionOpen, getMissionRoute, emitNpcReport, startMission, finishMission, advanceMissionTransport, advanceMissions, requestTransport, recordTransportNotice, holdTransportForBoarding, advanceTransports, startTimer, advanceTimers };
 }

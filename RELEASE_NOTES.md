@@ -1,8 +1,8 @@
-# Interactive Fiction v1.5.0
+# Interactive Fiction v1.6.0
 
-Inline scenery links can now use an ID alone: `[[street_lamp]]` displays the scenery object's `name`. An explicit `[[label|street_lamp]]` still overrides the wording. Names retain their authored capitalization. Optional `title` supplies a separate examination heading; shorthand falls back to title, then ID. `[[item:key]]` similarly uses an object's name while retaining ordinary access checks.
+Transports now have independent identities, room-backed boarding spaces and named stops. Panels and other controls request journeys through the controller. The engine derives boarding connections, validates journey state, preserves queues and supports physical NPC journeys without assuming floors or door hardware.
 
-The browser resolves shorthand in the room or popup's supplied scenery context. Current names are read on each render and survive saves. Existing labelled links remain supported. Runtime schema and save format remain 1.
+Use `game.getTransport(id)` and `game.requestTransport({transport, destination, actor})`. Departure and arrival events expose world transitions. Container- and supporter-backed boarding spaces are explicitly unsupported in this release. Existing v1 APIs and saves remain supported; runtime schema and save format remain 1.
 
 The two MIT-licensed packages are:
 
@@ -12,7 +12,7 @@ The two MIT-licensed packages are:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.5.0/paulbowler-if-engine-1.5.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.5.0/paulbowler-if-browser-1.5.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.0/paulbowler-if-engine-1.6.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.0/paulbowler-if-browser-1.6.0.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

@@ -1,3 +1,4 @@
+import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
 import { normaliseWorld } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
@@ -37,6 +38,7 @@ function cloneModel(model) {
 
 function validateWorld(model, referenceModel = model) {
     validateWorldDescriptions(model);
+    validateTransports(model);
     const object = (value) => value && typeof value === 'object' && !Array.isArray(value);
     const require = (valid, message) => { if (!valid) throw new Error(`Invalid world: ${message}`); };
     require(object(model) && typeof model.version === 'string', 'version is required');
@@ -198,8 +200,8 @@ function validateWorld(model, referenceModel = model) {
             edges.forEach(edge => {
                 require(Boolean(model.rooms[edge.to]), 'invalid mission route destination');
                 if (edge.transport) {
-                    const transport = definitions.get(edge.transport)?.properties?.transport;
-                    require(Boolean(transport?.stops[from] && transport.stops[edge.to]), 'mission transport edge needs two stops');
+                    const transport = model.transports?.[edge.transport] ?? definitions.get(edge.transport)?.properties?.transport;
+                    require(Boolean(transport && transportStopAt(transport,from) !== undefined && transportStopAt(transport,edge.to) !== undefined), 'mission transport edge needs two stops');
                 } else require(Boolean(model.rooms[from].exits[edge.to]), 'mission route needs a physical exit');
             });
         });
@@ -215,8 +217,8 @@ function validateWorld(model, referenceModel = model) {
             require(Boolean(config.destinations[mission.destination]) && ['outbound', 'searching', 'returning'].includes(mission.phase), 'invalid active mission');
             if (mission.phase === 'searching') require(Number.isInteger(mission.remaining) && mission.remaining > 0, 'invalid search remaining');
             if (mission.ride) {
-                const ride = mission.ride, transport = definitions.get(ride.edge?.transport)?.properties?.transport;
-                require(['waiting', 'ready', 'boarded', 'riding'].includes(ride.stage) && Boolean(transport?.stops[ride.origin] && transport.stops[ride.edge.to]), 'invalid mission ride');
+                const ride = mission.ride, transport = model.transports?.[ride.edge?.transport] ?? definitions.get(ride.edge?.transport)?.properties?.transport;
+                require(['waiting', 'ready', 'boarded', 'riding'].includes(ride.stage) && Boolean(transport && transportStopAt(transport,ride.origin) !== undefined && transportStopAt(transport,ride.edge.to) !== undefined), 'invalid mission ride');
             }
         }
     });
@@ -939,6 +941,8 @@ function getExitDisplayDefinition(exitDefinition, roomName) {
 }
 
 function isExitVisible(exitDefinition) {
+    const link = exitDefinition?.transport;
+    if (link && gameModel.player.currentRoom === gameModel.transports?.[link.id]?.space.room && !worldEvents.transportConnectionOpen(link)) return false;
     return !exitDefinition?.visibleWhen || evaluateCondition(exitDefinition.visibleWhen);
 }
 
@@ -965,6 +969,15 @@ function getItemPropertyValue(item, propertyPath) {
 }
 
 function getExitBlockedMessage(exitDefinition) {
+    const configured = getConfiguredExitBlockedMessage(exitDefinition);
+    if (configured) return configured;
+    const link = exitDefinition?.transport;
+    if (link && !worldEvents.transportConnectionOpen(link))
+        return gameModel.transports?.[link.id]?.blockedMessage || 'You cannot board or leave the transport here yet.';
+    return null;
+}
+
+function getConfiguredExitBlockedMessage(exitDefinition) {
     if (!exitDefinition?.condition) {
         return null;
     }
@@ -2286,6 +2299,7 @@ function advanceTimers(...args) { return worldEvents.advanceTimers(...args); }
 
 const api = {
     output, displayMessageModal, showItemChoiceOptions,
+    getTransport(id) { return worldEvents.getTransport(id); },
     get state() { return gameModel; },
     world: cloneModel(world), messages: [],
     setHooks(value) { hooks = { ...hooks, ...value }; },

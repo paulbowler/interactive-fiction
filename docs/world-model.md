@@ -152,3 +152,10 @@ The JSON5 loader and normalizer reject broken starting-room, exit, passage and k
 `if-build` parses and normalizes the authoring file, then writes `dist/data/game.json`. The authoring `.json5` file is omitted from deployment. The browser uses the compiled JSON URL, so players need no JSON5 parser. A configured `.json` world is also accepted. Custom world filenames compile to the same path with a `.json` extension; set the view's `worldUrl` accordingly.
 
 Use an optional `prose` dictionary for named report strings or lists of strings. Controllers read that text to construct conditional exit, actor and action reports. Keep `variants` records, selection conditions and variant-specific timings in controller JavaScript; initial prose stays on its room or object. See [Naming report alternatives](feature-reference.md#naming-report-alternatives).
+
+
+## Transport entities
+
+Use `transports` for named vehicles or conveyances with a boarding space and defined stops. Each transport owns its journey state; its `space: {room: 'interiorId'}` owns the occupants through normal room containment. Stops map stable stop IDs to ordinary room IDs. The normalizer supplies empty journey bookkeeping and creates inspectable boarding connections. Controls and exceptional journey rules stay in JavaScript, with all report text in named model prose. See the [transport schema, defaults and controller API](feature-reference.md#transport).
+
+Room-backed spaces are supported now. Enterable-container and rideable-supporter spaces are not yet supported and are rejected rather than treated as rooms.

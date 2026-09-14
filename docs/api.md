@@ -106,3 +106,10 @@ Browser automatic save selection also checks the story's string `version`. Keep 
 Optional `template` and `styles` override defaults. Template placeholders are `{{title}}`, `{{release}}` and `{{entry}}`; `release` defaults to the world version. Keep the default template's DOM IDs for the standard view. The builder inserts the two package import mappings. Source imports must be relative ES modules or one of these two packages; this is a small copier/build tool, not an arbitrary npm bundler. Other bundlers can use the public entry points directly.
 
 Images must be local, included in configured public directories. Output is a separate child directory, replaced only if empty or carrying a previous build marker. Builds are deterministic for identical inputs. `build-info.json` records selected versions; the worker revision hashes content, including every vendor module and asset. A complete successful precache is required before activation.
+
+
+## Transport requests
+
+`game.getTransport(id)` returns live transport state. `game.requestTransport({transport, destination, actor?, dwell?, condition?, effects?})` queues a request and returns whether it was accepted. The destination is a stop ID. Requesting does not itself consume a turn; use it inside a dispatched, committed interaction. Transport advancement uses the engine's normal turn scheduler. Reacquire state references after loading.
+
+The engine emits `transportDeparted` and `transportArrived` facts. Room-backed boarding spaces and automatic boarding connections are supported. See the [complete transport reference](feature-reference.md#transport) for defaults, events, NPC routes and validation.

@@ -1,3 +1,4 @@
+import { normaliseTransports, validateTransports } from './transports.js';
 import { validateWorldDescriptions } from './descriptions.js';
 import { cloneSerializable } from './serialization.js';
 
@@ -33,7 +34,7 @@ export function normaliseWorld(definition) {
         delete room.scenery;
     }
     if (world.schemaVersion !== undefined && world.schemaVersion !== 1) fail('schemaVersion', 'Unsupported world schema version');
-    if (world.player?.currentRoom !== undefined && world.player.room === undefined) return world;
+    if (world.player?.currentRoom !== undefined && world.player.room === undefined) { validateTransports(world); return world; }
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');
     record(world.player, 'player');
     if (world.player.currentRoom !== undefined) fail('player', 'use room only');
@@ -138,5 +139,6 @@ export function normaliseWorld(definition) {
         }
     }
     checkData(world, 'world');
+    normaliseTransports(world);
     return world;
 }

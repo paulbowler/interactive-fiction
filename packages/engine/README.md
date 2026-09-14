@@ -1,6 +1,6 @@
 # @paulbowler/if-engine
 
-Version 1.5.0. A synchronous, deterministic interactive-fiction engine with no browser or runtime dependencies. MIT licensed.
+Version 1.6.0. A synchronous, deterministic interactive-fiction engine with no browser or runtime dependencies. MIT licensed.
 
 ```js
 import { createGame, STOP } from '@paulbowler/if-engine';

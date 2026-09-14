@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0
+
+- Independent transport entities reference a room-backed boarding space and named stops.
+- Derive boarding connections and validate transport state and references.
+- Reuse physical NPC boarding, deterministic queues and saved journeys across genres.
+- Add transport lookup and departure/arrival events; retain the v1 item-based transport API.
+- Document named ambient prose and controller-owned report selection.
+
 ## 1.5.0
 
 - ID-only inline scenery and item links resolve labels from current entity names.
