@@ -1,8 +1,11 @@
 # Model and controller feature reference
 
-This reference covers the built-in feature families in platform 1.5. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+For field types, required/optional attributes and defaults, see the [attribute reference](model-attributes.md) and [schema guide](schema.md).
 
-**Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered script IDs. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
+
+This reference covers the built-in feature families in platform 3.1. Read [World authoring](world-model.md) for JSON5 syntax, defaults, IDs and containment, and [API](api.md) for dispatch, rule registration, events, saves and browser setup.
+
+**Authoring fields** below belong in JSON5. Object fields are flat unless a structured capability is shown. **Controller configuration** belongs in JavaScript, after `createGame`: it uses runtime `properties` paths and registered callbacks. Do not embed action/effect programs or callbacks in the world file. Configuration and progress must remain serializable.
 
 ## Coverage map
 
@@ -16,7 +19,7 @@ This reference covers the built-in feature families in platform 1.5. Read [World
 | Reading, searching, pushing, climbing, switching, eating | [Interactions](#ordinary-interactions) |
 | Achievements and endings | [Progress](#achievements-and-endings) |
 | Notebook recording and text input | [Notes and input](#notebooks-and-recorded-input) |
-| Choices, tool actions, configured callbacks | [Controller configuration](#controller-interaction-configuration) |
+| Choices, tool actions, configured callbacks | [Controller configuration](#choices-and-input) |
 | Conditional prose, visibility and state queries | [Read-only queries](#read-only-queries) |
 | Clock, delayed events, item timers | [Time](#clock-and-delayed-events) |
 | Actor cues, missions, physical transport | [Actors and transport](#actors-missions-and-transport) |

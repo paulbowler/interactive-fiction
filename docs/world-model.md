@@ -1,5 +1,8 @@
 # Authoring a world
 
+For field types, required/optional attributes and defaults, see the [attribute reference](model-attributes.md) and [schema guide](schema.md).
+
+
 Write your world in `data/game.json5`. JSON5 supports comments, trailing commas, single or double quoted strings, and unquoted identifier keys. It remains data: no imports, variables, function calls or callbacks.
 
 ```json5

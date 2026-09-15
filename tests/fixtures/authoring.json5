@@ -1,0 +1,62 @@
+{
+  id: 'schema-example',
+  title: 'The Delivery',
+  player: {room: 'hall'},
+  startScreen: {title: 'The Delivery', text: ['A parcel awaits.']},
+  achievements: {delivered: {name: 'Delivered', description: 'Deliver the parcel.'}},
+  endings: [{id: 'done', title: 'Home', text: ['The delivery is complete.']}],
+  clock: {minutesPerTurn: 2, notices: [{minute: 10, text: 'The clock strikes.'}]},
+  rooms: {
+    hall: {
+      description: [{id: 'default', text: 'A [[mural]] hangs here.'}],
+      scenery: {mural: {name: 'mural', description: 'An old ferry.'}},
+      exits: {garden: {door: 'gate'}},
+      items: {
+        gate: {door: true, openable: true},
+        key: {portable: true},
+        chest: {
+          container: true, openable: true, lockable: true, key: 'key',
+          accepts: ['parcel'],
+          items: {parcel: {portable: true, sealed: true}},
+        },
+        shelf: {supporter: true},
+        satchel: {container: true, opened: true, portable: true},
+        notebook: {container: true, opened: true, portable: true},
+        plaque: {recordable: {container: 'notebook', entry: 'note'}},
+        book: {readable: {text: 'The ferry returns.', noteSources: ['plaque']}},
+        uniform: {portable: true, wearable: {removable: false}},
+        cake: {portable: true, edible: {outcomeText: 'Sweet.', consumed: true}},
+        cupboard: {searchable: {once: true}},
+        crate: {pushable: {}, pullable: {}, climbable: {}},
+        lamp: {turnable: true},
+        button: {pressable: {transport: 'ferry', stop: 'garden'}},
+        cable: {connectable: {targets: {console: {label: 'Connect'}}}},
+        console: {
+          input: {notesOnly: true},
+          choices: [{id: 'inspect', label: 'Inspect', options: [{id: 'status', label: 'Status'}]}],
+        },
+        scissors: {portable: true, tool: {capabilities: ['cut']}},
+        ribbon: {cuttable: {capability: 'cut', options: [{id: 'snip', label: 'Snip'}]}},
+        hatch: {passage: {destination: 'garden'}},
+        reader: {container: true, insertable: {key: {label: 'Swipe', retain: true}}},
+        courier: {
+          npc: {
+            state: 'waiting',
+            missions: {
+              home: 'hall', idleState: 'waiting',
+              states: {outbound: 'walking', searching: 'checking', returning: 'returning'},
+              routes: {hall: [{to: 'garden'}], garden: [{to: 'hall'}]},
+              destinations: {delivery: {room: 'garden', searchTurns: 2}},
+            },
+          },
+        },
+      },
+    },
+    garden: {exits: {hall: {}}},
+    deck: {},
+  },
+  items: {
+    note: {portable: true, textValue: 'FERRY', textInputTargets: ['console']},
+  },
+  transports: {ferry: {space: {room: 'deck'}, stops: ['hall', 'garden'], stop: 'hall'}},
+}

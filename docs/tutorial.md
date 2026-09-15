@@ -1,5 +1,8 @@
 # Create your first game
 
+For field types, required/optional attributes and defaults, see the [attribute reference](model-attributes.md) and [schema guide](schema.md).
+
+
 This tutorial uses **A Quiet Study**, a complete small example distributed with the platform. You will open a locked box, discover a letter, add a consequence, test the story without a browser and build a site that works offline.
 
 You need Node.js 22 or later and a text editor. You do not need to modify the engine, install a database or run a server in production.
@@ -21,7 +24,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v3.0.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v3.1.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 

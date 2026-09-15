@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import JSON5 from 'json5';
+import Ajv from 'ajv';
 import { normaliseWorld } from '@paulbowler/if-engine';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -22,10 +23,24 @@ async function listFiles(dir, prefix = '') {
     return files;
 }
 
+// The schema checks authoring shapes; normalization checks relationships.
+const schemaPath = createRequire(import.meta.url).resolve('@paulbowler/if-engine/world.schema.json');
+const validateAuthoring = new Ajv({allErrors: true, strict: false}).compile(await json(schemaPath));
+
+export function validateWorldData(data) {
+    if (!validateAuthoring(data)) {
+        const details = validateAuthoring.errors.map(error =>
+            `${error.instancePath || '/'}: ${error.message}` +
+            (error.params.additionalProperty ? ` (${error.params.additionalProperty})` : '')).join('; ');
+        throw new Error(`Invalid world authoring data: ${details}`);
+    }
+    return data;
+}
+
 // JSON5 is authoring-only. Deployed clients load the compiled JSON model.
 export async function loadWorld(file) {
     try {
-        return normaliseWorld(JSON5.parse(await fs.readFile(file, 'utf8')));
+        return normaliseWorld(validateWorldData(JSON5.parse(await fs.readFile(file, 'utf8'))));
     } catch (error) {
         throw new Error(`Cannot load world ${file}: ${error.message}`, { cause: error });
     }

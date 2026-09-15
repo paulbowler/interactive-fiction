@@ -324,3 +324,7 @@ Contexts provide `ctx.get(itemID, propertyPath)`, `ctx.inRoom(itemID, roomID)` a
 `ctx.inContainer(itemID, containerID)`. Property paths are relative to `properties`.
 Location tests check the direct owner, not ancestor rooms or accessibility. These
 helpers query current state on every call, including after a save is loaded.
+
+## Authoring schema validation
+
+The Node-only browser build entry exports `validateWorldData(data)` for parsed authoring data. `loadWorld(path)` validates JSON5 before normalization. See the [schema guide](schema.md) and complete [attribute reference](model-attributes.md).

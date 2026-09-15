@@ -1,0 +1,2726 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Interactive Fiction world authoring schema",
+  "description": "World schema 2, flat JSON5 authoring. See docs/model-attributes.md.",
+  "allOf": [
+    {
+      "$ref": "#/$defs/world"
+    },
+    {
+      "$ref": "#/$defs/data"
+    }
+  ],
+  "$defs": {
+    "description": {
+      "title": "Description",
+      "description": "String or named text alternatives. Alternatives require default; selectors return IDs.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Named description catalog.",
+          "required": [
+            "default"
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Persistent entity or variant ID; references remain strings.",
+                "pattern": "\\S"
+              },
+              "text": {
+                "type": "string",
+                "description": "Display text."
+              }
+            },
+            "additionalProperties": false
+          },
+          "contains": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "default"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "text": {
+      "title": "Text",
+      "description": "Unconditional string, or ordered strings/named segments. Controller selects named segments; no code is evaluated.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "id",
+                  "text"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Persistent entity or variant ID; references remain strings.",
+                    "pattern": "\\S"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Display text."
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "description": "Ordered segments."
+        }
+      ]
+    },
+    "paragraphs": {
+      "title": "Paragraphs",
+      "description": "String or array of paragraphs; a paragraph may itself contain named segments.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Paragraphs."
+        }
+      ]
+    },
+    "prose": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ordered passages."
+          }
+        ]
+      },
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "description": "Entity-owned named prose; no automatic fallback between owners."
+    },
+    "items": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/object"
+      },
+      "propertyNames": {
+        "pattern": "\\S"
+      },
+      "description": "Object definitions keyed by persistent ID; nested declarations establish ownership."
+    },
+    "idList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Persistent entity or variant ID; references remain strings.",
+        "pattern": "\\S"
+      },
+      "description": "Persistent object IDs."
+    },
+    "imagePosition": {
+      "title": "imagePosition",
+      "type": "object",
+      "description": "Image crop alignment.",
+      "properties": {
+        "x": {
+          "type": "string",
+          "description": "Horizontal alignment.",
+          "enum": [
+            "left",
+            "center",
+            "centre",
+            "right"
+          ],
+          "default": "center"
+        },
+        "y": {
+          "type": "string",
+          "description": "Vertical alignment.",
+          "enum": [
+            "top",
+            "middle",
+            "center",
+            "centre",
+            "bottom"
+          ],
+          "default": "center"
+        }
+      },
+      "additionalProperties": false
+    },
+    "startScreen": {
+      "title": "startScreen",
+      "type": "object",
+      "description": "Opening screen; omitted world field becomes a screen with the world title.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Heading; falls back to world title."
+        },
+        "kicker": {
+          "type": "string",
+          "description": "Short text above heading; falls back to subtitle."
+        },
+        "subtitle": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "text": {
+          "$ref": "#/$defs/paragraphs"
+        },
+        "description": {
+          "$ref": "#/$defs/paragraphs",
+          "description": "Fallback for absent text."
+        },
+        "buttonLabel": {
+          "type": "string",
+          "description": "Start button label.",
+          "default": "Start"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Local image asset path."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scenery": {
+      "title": "scenery",
+      "type": "object",
+      "description": "Room-local examinable feature. Use an ordinary object for other actions.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Inline name; falls back to title, then ID.",
+          "pattern": "\\S"
+        },
+        "title": {
+          "type": "string",
+          "description": "Examination heading; falls back to name, then Examine."
+        },
+        "description": {
+          "$ref": "#/$defs/description"
+        },
+        "prose": {
+          "$ref": "#/$defs/prose"
+        },
+        "examined": {
+          "type": "boolean",
+          "description": "Examination progress; engine sets true when examined.",
+          "default": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "beforeMove": {
+      "title": "beforeMove",
+      "type": "object",
+      "description": "Pre-travel acknowledgement message.",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Message heading.",
+          "default": "Before Moving"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message"
+      ]
+    },
+    "exit": {
+      "title": "exit",
+      "type": "object",
+      "description": "Connection keyed by destination room ID. Empty definition is valid.",
+      "properties": {
+        "before": {
+          "type": "string",
+          "description": "Text before destination link; default wording describes an exit."
+        },
+        "after": {
+          "type": "string",
+          "description": "Text after destination link."
+        },
+        "label": {
+          "type": "string",
+          "description": "Overrides linked destination room name."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional wording used to derive display parts; prefer before/after."
+        },
+        "listed": {
+          "type": "boolean",
+          "description": "Include in automatic exit list; does not remove topology.",
+          "default": true
+        },
+        "door": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "standingOn": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "successMessage": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "successTitle": {
+          "type": "string",
+          "description": "Immediate travel feedback heading.",
+          "default": "Done"
+        },
+        "deferMoveUntilMessageClosed": {
+          "type": "boolean",
+          "description": "Complete travel after acknowledgement.",
+          "default": false
+        },
+        "beforeMove": {
+          "$ref": "#/$defs/beforeMove"
+        }
+      },
+      "additionalProperties": false
+    },
+    "room": {
+      "title": "room",
+      "type": "object",
+      "description": "Room definition; name and description recommended, empty items/exits inferred.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name; recommended for objects shown to players."
+        },
+        "description": {
+          "$ref": "#/$defs/description"
+        },
+        "prose": {
+          "$ref": "#/$defs/prose"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Local image asset path. Object images do not automatically get a separate browser panel."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition"
+        },
+        "items": {
+          "$ref": "#/$defs/items"
+        },
+        "exits": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/exit"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Destination room IDs mapped to exits."
+        },
+        "scenery": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/scenery"
+          },
+          "propertyNames": {
+            "pattern": "^(?!.*:).*\\S.*$"
+          },
+          "description": "Room-local features; IDs cannot contain a colon."
+        },
+        "clues": false
+      },
+      "additionalProperties": true
+    },
+    "wearable": {
+      "title": "wearable",
+      "type": "object",
+      "description": "Wear/remove settings. Boolean true also enables wearing.",
+      "properties": {
+        "removable": {
+          "type": "boolean",
+          "description": "Permit removal.",
+          "default": true
+        },
+        "removeMessage": {
+          "type": "string",
+          "description": "Feedback when removal is refused; ordinary refusal when omitted."
+        }
+      },
+      "additionalProperties": false
+    },
+    "insertion": {
+      "title": "insertion",
+      "type": "object",
+      "description": "Special insertion/swipe for the item ID used as dictionary key.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Verb prefix.",
+          "default": "Insert into"
+        },
+        "retain": {
+          "type": "boolean",
+          "description": "Leave item held after use; the held object retain flag also applies.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "connection": {
+      "title": "connection",
+      "type": "object",
+      "description": "One connection target, keyed by object ID.",
+      "properties": {
+        "connected": {
+          "type": "boolean",
+          "description": "Initial connection state; connecting clears other targets.",
+          "default": false
+        },
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "disconnectLabel": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "disconnectMessage": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "disconnectTitle": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "disconnected": {
+          "type": "boolean",
+          "description": "Initial progress flag set by disconnection.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "connectable": {
+      "title": "connectable",
+      "type": "object",
+      "description": "Connection capability; movement disconnects owned objects.",
+      "properties": {
+        "targets": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/connection"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Object IDs mapped to connection settings."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "targets"
+      ]
+    },
+    "readable": {
+      "title": "readable",
+      "type": "object",
+      "description": "Enables Read, which consumes one turn; does not set a read flag.",
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/text"
+        },
+        "noteSources": {
+          "$ref": "#/$defs/idList",
+          "description": "Recording sources offered in the reading dialog; omitted means none."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text"
+      ]
+    },
+    "searchable": {
+      "title": "searchable",
+      "type": "object",
+      "description": "Search capability; sets searched and consumes a turn.",
+      "properties": {
+        "once": {
+          "type": "boolean",
+          "description": "Prevent repeat searches.",
+          "default": false
+        },
+        "searched": {
+          "type": "boolean",
+          "description": "Initial search progress.",
+          "default": false
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "pushable": {
+      "title": "pushable",
+      "type": "object",
+      "description": "Push capability; sets pushed true.",
+      "properties": {
+        "pushed": {
+          "type": "boolean",
+          "description": "Initial pushed state.",
+          "default": false
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "pushedLabel": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "unpushedLabel": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "pushedDescription": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "unpushedDescription": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "pullable": {
+      "title": "pullable",
+      "type": "object",
+      "description": "Resets this object’s pushable.pushed state. Requires it to be pushed.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "climbable": {
+      "title": "climbable",
+      "type": "object",
+      "description": "Standing-on capability; ordinary movement requires climbing down unless the exit declares standingOn.",
+      "properties": {
+        "climbed": {
+          "type": "boolean",
+          "description": "Initial climb state; engine also maintains player posture.",
+          "default": false
+        },
+        "message": {
+          "$ref": "#/$defs/text",
+          "description": "Climb feedback; ordinary wording when omitted."
+        },
+        "downMessage": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "movementBlockedMessage": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "standingDescription": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "pressable": {
+      "title": "pressable",
+      "type": "object",
+      "description": "Enables Press; effects belong in rules, except a declared transport control.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Menu label.",
+          "default": "Press"
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "transport": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "stop": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "dwell": {
+          "type": "integer",
+          "description": "Updates to wait before selecting another transport request.",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "dependencies": {
+        "transport": [
+          "stop"
+        ],
+        "stop": [
+          "transport"
+        ]
+      }
+    },
+    "edible": {
+      "title": "edible",
+      "type": "object",
+      "description": "Eating reports outcomeText; consumed controls deletion and turn cost.",
+      "properties": {
+        "outcomeText": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "consumed": {
+          "type": "boolean",
+          "description": "Delete item and commit a turn when eaten.",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "outcomeText"
+      ]
+    },
+    "tool": {
+      "title": "tool",
+      "type": "object",
+      "description": "Held tool capable of named operations.",
+      "properties": {
+        "capabilities": {
+          "$ref": "#/$defs/idList",
+          "description": "Story-defined capability names, such as cut."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "capabilities"
+      ]
+    },
+    "toolOption": {
+      "title": "toolOption",
+      "type": "object",
+      "description": "Named control for a matching tool; controller handles the action.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label"
+      ]
+    },
+    "cuttable": {
+      "title": "cuttable",
+      "type": "object",
+      "description": "Target of named tool operations.",
+      "properties": {
+        "capability": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "tool": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/toolOption"
+          },
+          "description": "Named tool options."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "capability"
+      ]
+    },
+    "record": {
+      "title": "record",
+      "type": "object",
+      "description": "Creates a note prototype in an accessible owned open notebook.",
+      "properties": {
+        "container": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "entry": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "buttonLabel": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "label": {
+          "type": "string",
+          "description": "Suffix for default Make a note label."
+        },
+        "message": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "onExamine": {
+          "type": "boolean",
+          "description": "Offer recording in direct examination controls.",
+          "default": true
+        },
+        "offerInput": {
+          "type": "boolean",
+          "description": "Offer compatible inputs after recording.",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "container",
+        "entry"
+      ]
+    },
+    "choiceOption": {
+      "title": "choiceOption",
+      "type": "object",
+      "description": "Named submenu option; handling belongs in chooseOption rules.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "disabled": {
+          "type": "boolean",
+          "description": "Initially disabled control.",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label"
+      ]
+    },
+    "choice": {
+      "title": "choice",
+      "type": "object",
+      "description": "Named interaction control; handling belongs in choose rules.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choiceOption"
+          },
+          "description": "Optional submenu controls."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label"
+      ]
+    },
+    "input": {
+      "title": "input",
+      "type": "object",
+      "description": "Text input control; submitInput rules handle acceptance.",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "Menu label.",
+          "default": "Enter Input"
+        },
+        "title": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "placeholder": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "notesOnly": {
+          "type": "boolean",
+          "description": "Hide free-form input; allow recorded values.",
+          "default": false
+        },
+        "failureMessage": {
+          "type": "string",
+          "description": "Unhandled input response.",
+          "default": "That is not accepted."
+        },
+        "failureTitle": {
+          "type": "string",
+          "description": "Unhandled input heading.",
+          "default": "Rejected"
+        },
+        "failureConsumesTurn": {
+          "type": "boolean",
+          "description": "Charge a turn for generic rejection.",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "passage": {
+      "title": "passage",
+      "type": "object",
+      "description": "Enter interaction using the current room’s declared exit.",
+      "properties": {
+        "destination": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "label": {
+          "type": "string",
+          "description": "Menu label.",
+          "default": "Enter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "destination"
+      ]
+    },
+    "missionStates": {
+      "title": "missionStates",
+      "type": "object",
+      "description": "Names used by the controller to describe mission phases.",
+      "properties": {
+        "outbound": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "searching": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "returning": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "outbound",
+        "searching",
+        "returning"
+      ]
+    },
+    "routeEdge": {
+      "title": "routeEdge",
+      "type": "object",
+      "description": "Actor route edge; room graph is independent of player restrictions.",
+      "properties": {
+        "to": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "transport": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "to"
+      ]
+    },
+    "missionDestination": {
+      "title": "missionDestination",
+      "type": "object",
+      "description": "Actor visit keyed by mission ID. Completion prevents ordinary repeat requests.",
+      "properties": {
+        "room": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "searchTurns": {
+          "type": "integer",
+          "description": "Timed updates spent searching.",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "departure": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Varied report passages; no report when omitted."
+        },
+        "departureReply": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "\\S"
+          },
+          "description": "Varied report passages; no report when omitted.",
+          "minItems": 1
+        },
+        "arrival": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Varied report passages; no report when omitted."
+        },
+        "finished": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Varied report passages; no report when omitted."
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "room",
+        "searchTurns"
+      ]
+    },
+    "missions": {
+      "title": "missions",
+      "type": "object",
+      "description": "Actor mission routes and base visits. Put exceptional durations and conditional reports in controller rules.",
+      "properties": {
+        "home": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "idleState": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "states": {
+          "$ref": "#/$defs/missionStates"
+        },
+        "routes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/routeEdge"
+            },
+            "description": "Outgoing edges."
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Room-keyed route graph."
+        },
+        "destinations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/missionDestination"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Mission definitions."
+        },
+        "homeReport": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Reports on return home."
+        },
+        "blockedReport": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Reports when no route is available."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "home",
+        "idleState",
+        "states",
+        "routes",
+        "destinations"
+      ]
+    },
+    "npc": {
+      "title": "npc",
+      "type": "object",
+      "description": "An actor is an ordinary object with npc configuration, not a separate top-level collection.",
+      "properties": {
+        "state": {
+          "type": "string",
+          "description": "Story-defined initial state; author explicit values needed by rules."
+        },
+        "nearbyDescription": {
+          "$ref": "#/$defs/text",
+          "description": "Description when in an adjacent accessible room."
+        },
+        "missions": {
+          "$ref": "#/$defs/missions"
+        },
+        "movementCue": {
+          "$ref": "#/$defs/movementCue"
+        },
+        "turnCue": {
+          "$ref": "#/$defs/turnCue"
+        }
+      },
+      "additionalProperties": true
+    },
+    "transportSpace": {
+      "title": "transportSpace",
+      "type": "object",
+      "description": "Only room-backed boarding is implemented.",
+      "properties": {
+        "room": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "room"
+      ]
+    },
+    "transportStop": {
+      "title": "transportStop",
+      "type": "object",
+      "description": "A stop outside the boarding room.",
+      "properties": {
+        "room": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "room"
+      ]
+    },
+    "transport": {
+      "title": "transport",
+      "type": "object",
+      "description": "Independent physical transport. Occupants live in the boarding room’s ordinary collections.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "prose": {
+          "$ref": "#/$defs/prose"
+        },
+        "space": {
+          "$ref": "#/$defs/transportSpace"
+        },
+        "stops": {
+          "description": "Nonempty unique room ID list, or stop IDs mapped to room definitions.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Persistent entity or variant ID; references remain strings.",
+                "pattern": "\\S"
+              },
+              "description": "Room IDs.",
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/transportStop"
+              },
+              "propertyNames": {
+                "pattern": "\\S"
+              },
+              "description": "Named stops.",
+              "minProperties": 1
+            }
+          ]
+        },
+        "stop": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "boardingOpen": {
+          "type": "boolean",
+          "description": "Allow boarding/leaving while idle.",
+          "default": true
+        },
+        "blockedMessage": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "space",
+        "stops",
+        "stop"
+      ]
+    },
+    "achievement": {
+      "title": "achievement",
+      "type": "object",
+      "description": "Definition keyed by achievement ID. Controller explicitly awards it.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "description": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false
+    },
+    "encounter": {
+      "title": "encounter",
+      "type": "object",
+      "description": "Message shown before an ending; acknowledgement reveals the ending screen.",
+      "properties": {
+        "description": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ending": {
+      "title": "ending",
+      "type": "object",
+      "description": "Ending definition. Controller chooses when to end play.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "title": {
+          "type": "string",
+          "description": "Heading; falls back to name."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "kicker": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "text": {
+          "$ref": "#/$defs/paragraphs"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Local image asset path."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition"
+        },
+        "encounter": {
+          "$ref": "#/$defs/encounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ]
+    },
+    "clockNotice": {
+      "title": "clockNotice",
+      "type": "object",
+      "description": "Message when elapsed minutes cross a threshold.",
+      "properties": {
+        "minute": {
+          "type": "integer",
+          "description": "Positive minute threshold.",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "text": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "minute",
+        "text"
+      ]
+    },
+    "clock": {
+      "title": "clock",
+      "type": "object",
+      "description": "Optional clock controls; timed actions still cost minutes without this object.",
+      "properties": {
+        "minutesPerTurn": {
+          "type": "integer",
+          "description": "Minutes per timed commit.",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "default": 1
+        },
+        "notices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/clockNotice"
+          },
+          "description": "Threshold notices; omitted means none."
+        }
+      },
+      "additionalProperties": false
+    },
+    "player": {
+      "title": "player",
+      "type": "object",
+      "description": "Player initial state; owned objects are definitions, not lists of IDs.",
+      "properties": {
+        "room": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "elapsedMinutes": {
+          "type": "integer",
+          "description": "Initial elapsed time.",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "default": 0
+        },
+        "carried": {
+          "$ref": "#/$defs/items"
+        },
+        "worn": {
+          "$ref": "#/$defs/items"
+        },
+        "visitedRooms": {
+          "type": "object",
+          "additionalProperties": {
+            "const": true
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Optional previously visited room IDs; current room is marked on initialization."
+        },
+        "currentRoom": false
+      },
+      "additionalProperties": true,
+      "required": [
+        "room"
+      ]
+    },
+    "object": {
+      "title": "object",
+      "type": "object",
+      "description": "Composable flat capabilities. ID comes from the collection key. No object fields are universally required; name and description are recommended. Additional JSON fields are explicit game state.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name; recommended for objects shown to players."
+        },
+        "description": {
+          "$ref": "#/$defs/description"
+        },
+        "prose": {
+          "$ref": "#/$defs/prose"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Local image asset path. Object images do not automatically get a separate browser panel."
+        },
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "article": {
+          "type": "string",
+          "description": "Grammatical article, such as a, an or the."
+        },
+        "detail": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "portable": {
+          "type": "boolean",
+          "description": "Allows taking accessible objects.",
+          "default": false
+        },
+        "fixed": {
+          "type": "boolean",
+          "description": "Prevents taking; cannot combine with portable true.",
+          "default": false
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Hidden object and its contents are inaccessible.",
+          "default": false
+        },
+        "scenery": {
+          "type": "boolean",
+          "description": "Suppress automatic object listing; still supports ordinary actions.",
+          "default": false
+        },
+        "droppable": {
+          "type": "boolean",
+          "description": "Allow dropping a carried item.",
+          "default": true
+        },
+        "requiresHeld": {
+          "type": "boolean",
+          "description": "Most uses require direct carrying.",
+          "default": false
+        },
+        "retain": {
+          "type": "boolean",
+          "description": "Keep held after special insertion/swipe.",
+          "default": false
+        },
+        "weight": {
+          "type": "number",
+          "description": "Controller data only; no built-in capacity limit.",
+          "minimum": 0
+        },
+        "container": {
+          "type": "boolean",
+          "description": "Enable containment; does not imply openable or opened.",
+          "default": false
+        },
+        "supporter": {
+          "type": "boolean",
+          "description": "Enable visible holding; implies opened true.",
+          "default": false
+        },
+        "door": {
+          "type": "boolean",
+          "description": "Door state used by exits; incompatible with container/supporter.",
+          "default": false
+        },
+        "openable": {
+          "type": "boolean",
+          "description": "Offer opening/closing; requires container, supporter or door.",
+          "default": false
+        },
+        "opened": {
+          "type": "boolean",
+          "description": "Initial open state: omitted becomes false for openable objects, true for supporters, otherwise remains absent. A non-openable container needs opened true to expose contents."
+        },
+        "lockable": {
+          "type": "boolean",
+          "description": "Support locking/unlocking; does not imply openable.",
+          "default": false
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "Initial lock state; requires lockable true and cannot combine with opened true.",
+          "default": false
+        },
+        "key": {
+          "type": "string",
+          "description": "Key object ID; requires lockable true. Omitted means keyless manual locking/unlocking.",
+          "pattern": "\\S"
+        },
+        "items": {
+          "$ref": "#/$defs/items"
+        },
+        "accepts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordinary placement whitelist. Omitted or * allows any item; [] allows none."
+        },
+        "transparent": {
+          "type": "boolean",
+          "description": "Closed contents are visible AND accessible; ordinary Put still needs opened.",
+          "default": false
+        },
+        "takeLabel": {
+          "type": "string",
+          "description": "Removal label; Take for supporters, Take Out for containers."
+        },
+        "insertable": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/insertion"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Item IDs mapped to insertion/swipe controls; overrides ordinary placement for that item."
+        },
+        "openMessage": {
+          "type": "string",
+          "description": "Optional feedback; ordinary engine wording when omitted."
+        },
+        "closeMessage": {
+          "type": "string",
+          "description": "Optional feedback; ordinary engine wording when omitted."
+        },
+        "lockedMessage": {
+          "type": "string",
+          "description": "Optional feedback; ordinary engine wording when omitted."
+        },
+        "lockMessage": {
+          "type": "string",
+          "description": "Door feedback override. Container handlers use standard feedback; change it with a report rule."
+        },
+        "unlockMessage": {
+          "type": "string",
+          "description": "Door feedback override. Container handlers use standard feedback; change it with a report rule."
+        },
+        "wearable": {
+          "description": "Boolean true enables wearing, or use removal settings.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/$defs/wearable"
+            }
+          ]
+        },
+        "connectable": {
+          "$ref": "#/$defs/connectable"
+        },
+        "readable": {
+          "$ref": "#/$defs/readable"
+        },
+        "searchable": {
+          "$ref": "#/$defs/searchable"
+        },
+        "pushable": {
+          "$ref": "#/$defs/pushable"
+        },
+        "pullable": {
+          "$ref": "#/$defs/pullable"
+        },
+        "climbable": {
+          "$ref": "#/$defs/climbable"
+        },
+        "pressable": {
+          "$ref": "#/$defs/pressable"
+        },
+        "edible": {
+          "$ref": "#/$defs/edible"
+        },
+        "tool": {
+          "$ref": "#/$defs/tool"
+        },
+        "cuttable": {
+          "$ref": "#/$defs/cuttable"
+        },
+        "input": {
+          "$ref": "#/$defs/input"
+        },
+        "passage": {
+          "$ref": "#/$defs/passage"
+        },
+        "npc": {
+          "$ref": "#/$defs/npc"
+        },
+        "turnable": {
+          "type": "boolean",
+          "description": "Enable Turn On/Off.",
+          "default": false
+        },
+        "turnedOn": {
+          "type": "boolean",
+          "description": "Initial switch state; does not enable switching alone.",
+          "default": false
+        },
+        "choices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/choice"
+          },
+          "description": "Named controls; omitted means none."
+        },
+        "recordable": {
+          "description": "One or more notebook recording choices.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/record"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/record"
+              },
+              "description": "Recording choices.",
+              "minItems": 1
+            }
+          ]
+        },
+        "textValue": {
+          "type": "string",
+          "description": "Recorded input value; controllers may compare against it."
+        },
+        "textInputLabel": {
+          "type": "string",
+          "description": "Note-to-device action label.",
+          "default": "Enter into"
+        },
+        "textInputTargets": {
+          "$ref": "#/$defs/idList",
+          "description": "Permitted device IDs; omit to allow reachable configured devices."
+        },
+        "properties": false,
+        "location": false,
+        "transport": false
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "fixed"
+            ],
+            "properties": {
+              "fixed": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "portable": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "locked"
+            ],
+            "properties": {
+              "locked": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "lockable"
+            ],
+            "properties": {
+              "lockable": {
+                "const": true
+              },
+              "opened": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "key"
+            ]
+          },
+          "then": {
+            "required": [
+              "lockable"
+            ],
+            "properties": {
+              "lockable": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "supporter"
+            ],
+            "properties": {
+              "supporter": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "openable": {
+                "const": false
+              },
+              "lockable": {
+                "const": false
+              },
+              "locked": {
+                "const": false
+              },
+              "door": {
+                "const": false
+              },
+              "opened": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "container"
+            ],
+            "properties": {
+              "container": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "door": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "opened"
+            ],
+            "properties": {
+              "opened": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "required": [
+                      "container"
+                    ],
+                    "properties": {
+                      "container": {
+                        "const": true
+                      }
+                    }
+                  },
+                  {
+                    "required": [
+                      "supporter"
+                    ],
+                    "properties": {
+                      "supporter": {
+                        "const": true
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "required": [
+                  "openable"
+                ],
+                "properties": {
+                  "openable": {
+                    "const": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "dependencies": {
+        "items": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "accepts": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "insertable": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "transparent": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "takeLabel": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "openable": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "opened": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "lockable": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "locked": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "key": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "openMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "closeMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "lockedMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "unlockMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "lockMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "world": {
+      "title": "world",
+      "type": "object",
+      "description": "JSON5 authoring model before normalization. Custom state is allowed; engine relationship validation runs after schema validation.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Game title.",
+          "pattern": "\\S"
+        },
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "version": {
+          "type": "string",
+          "description": "Story compatibility version.",
+          "default": "1"
+        },
+        "schemaVersion": {
+          "const": 2,
+          "description": "Optional world schema identifier; independent of package version."
+        },
+        "player": {
+          "$ref": "#/$defs/player"
+        },
+        "rooms": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/room"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Room definitions; must contain player.room."
+        },
+        "items": {
+          "$ref": "#/$defs/items",
+          "description": "Prototypes for later creation; absent means empty."
+        },
+        "startScreen": {
+          "$ref": "#/$defs/startScreen"
+        },
+        "achievements": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/achievement"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Definitions keyed by achievement ID; absent means empty."
+        },
+        "endings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ending"
+          },
+          "description": "Ending definitions; absent means empty."
+        },
+        "clock": {
+          "$ref": "#/$defs/clock"
+        },
+        "transports": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/transport"
+          },
+          "propertyNames": {
+            "pattern": "\\S"
+          },
+          "description": "Physical transports; absent means none."
+        },
+        "prose": {
+          "$ref": "#/$defs/prose"
+        },
+        "actors": false,
+        "runtime": false
+      },
+      "additionalProperties": true,
+      "required": [
+        "title",
+        "player",
+        "rooms"
+      ]
+    },
+    "data": {
+      "if": {
+        "type": "object"
+      },
+      "then": {
+        "propertyNames": {
+          "not": {
+            "enum": [
+              "onTake",
+              "onMove",
+              "beforeOpen",
+              "afterEnter",
+              "script",
+              "callback",
+              "effects",
+              "stateRules"
+            ]
+          }
+        },
+        "additionalProperties": {
+          "$ref": "#/$defs/data"
+        }
+      },
+      "else": {
+        "if": {
+          "type": "array"
+        },
+        "then": {
+          "items": {
+            "$ref": "#/$defs/data"
+          }
+        }
+      }
+    },
+    "imageVariant": {
+      "title": "imageVariant",
+      "type": "object",
+      "description": "Controller configuration: first eligible image variant wins.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Local image asset path."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "imageUrl"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "cue": {
+      "title": "cue",
+      "type": "object",
+      "description": "Controller configuration: room cue or observation; text comes from model prose.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "text": {
+          "$ref": "#/$defs/text"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "exitVariant": {
+      "title": "exitVariant",
+      "type": "object",
+      "description": "Controller configuration: first eligible exit wording variant wins.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "before": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "after": {
+          "type": "string",
+          "description": "Display text."
+        },
+        "label": {
+          "type": "string",
+          "description": "Display text."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "actorCueVariant": {
+      "title": "actorCueVariant",
+      "type": "object",
+      "description": "Controller configuration: ordered actor report alternative.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "texts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Varied reports."
+        },
+        "repeatTexts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/text"
+          },
+          "description": "Reports for repeated selection."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "texts"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "movementCue": {
+      "title": "movementCue",
+      "type": "object",
+      "description": "Actor movement report. Initial unconditional description may be authored; construct conditional variants in controller.",
+      "properties": {
+        "description": {
+          "$ref": "#/$defs/text"
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actorCueVariant"
+          },
+          "description": "Controller-configured alternatives."
+        }
+      },
+      "additionalProperties": false
+    },
+    "turnCue": {
+      "title": "turnCue",
+      "type": "object",
+      "description": "Actor turn reports. Construct conditional alternatives in controller.",
+      "properties": {
+        "intermittent": {
+          "type": "boolean",
+          "description": "Allow gaps and ambient replacements for repeated reports.",
+          "default": false
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/actorCueVariant"
+          },
+          "description": "Controller-configured alternatives."
+        }
+      },
+      "additionalProperties": false
+    },
+    "missionVariant": {
+      "title": "missionVariant",
+      "type": "object",
+      "description": "Controller configuration: exceptional mission duration and report override.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "searchTurns": {
+          "type": "integer",
+          "description": "Visit duration.",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "arrival": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Arrival reports."
+        },
+        "finished": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Display text."
+          },
+          "description": "Completion reports."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "searchTurns"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "predicateReference": {
+      "title": "predicateReference",
+      "type": "object",
+      "description": "Controller configuration: named predicate for delayed work, registered in every game instance.",
+      "properties": {
+        "predicate": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "predicate"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "transportRequest": {
+      "title": "transportRequest",
+      "type": "object",
+      "description": "Controller request / runtime queue entry; use requestTransport to create it.",
+      "properties": {
+        "destination": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "actor": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "dwell": {
+          "type": "integer",
+          "description": "Delay after arrival.",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "default": 0
+        },
+        "condition": {
+          "$ref": "#/$defs/predicateReference"
+        },
+        "event": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "data": {
+          "description": "Serializable event payload."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "destination"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "timer": {
+      "title": "timer",
+      "type": "object",
+      "description": "Runtime item timer; use startTimer to create it.",
+      "properties": {
+        "remaining": {
+          "type": "integer",
+          "description": "Updates remaining.",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "justStarted": {
+          "type": "boolean",
+          "description": "One-update grace.",
+          "default": true
+        },
+        "event": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "data": {
+          "description": "Serializable event payload."
+        },
+        "waitUntil": {
+          "$ref": "#/$defs/predicateReference"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "remaining",
+        "justStarted"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "scheduledEvent": {
+      "title": "scheduledEvent",
+      "type": "object",
+      "description": "Runtime scheduled job; use schedule.afterTurns to create it.",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Monotonic job ID.",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "due": {
+          "type": "integer",
+          "description": "Due scheduler turn.",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "event": {
+          "type": "string",
+          "description": "Persistent entity or variant ID; references remain strings.",
+          "pattern": "\\S"
+        },
+        "data": {
+          "description": "Serializable payload."
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "due",
+        "event"
+      ],
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "runtime": {
+      "title": "runtime",
+      "type": "object",
+      "description": "Engine-maintained save metadata; do not author.",
+      "properties": {
+        "saveFormatVersion": {
+          "const": 1
+        },
+        "worldSchemaVersion": {
+          "const": 2
+        },
+        "turn": {
+          "type": "integer",
+          "description": "Scheduler advances.",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "default": 0
+        },
+        "nextScheduleId": {
+          "type": "integer",
+          "description": "Last assigned job ID.",
+          "minimum": 0,
+          "maximum": 9007199254740991,
+          "default": 0
+        },
+        "randomSeed": {
+          "type": "integer",
+          "description": "Saved PRNG state.",
+          "minimum": 0,
+          "maximum": 4294967295,
+          "default": 123456789
+        },
+        "scheduled": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scheduledEvent"
+          },
+          "description": "Pending jobs."
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "Controller configuration or runtime state; not an authoring capability."
+    }
+  }
+}

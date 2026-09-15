@@ -1,0 +1,8 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": ["/data/game.json5"],
+      "url": "./node_modules/@paulbowler/if-engine/world.schema.json"
+    }
+  ]
+}

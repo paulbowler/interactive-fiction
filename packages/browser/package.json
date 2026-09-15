@@ -1,6 +1,6 @@
 {
   "name": "@paulbowler/if-browser",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Reusable interactive-fiction browser",
   "type": "module",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "if-build": "./bin/build.js"
   },
   "peerDependencies": {
-    "@paulbowler/if-engine": "^3.0.0"
+    "@paulbowler/if-engine": "^3.1.0"
   },
   "author": "Paul Bowler",
   "repository": {
@@ -43,6 +43,7 @@
     "url": "https://github.com/paulbowler/interactive-fiction/issues"
   },
   "dependencies": {
+    "ajv": "8.20.0",
     "json5": "2.2.3"
   }
 }

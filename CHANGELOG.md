@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.0
+
+Add a packaged world authoring schema, build-time JSON5 validation, and generated required/optional attribute documentation for all supported feature families. Runtime and save semantics are unchanged.
+
 ## 3.0.0
 
 Use scenery consistently across runtime state, examination actions and browser links. World schema 2 removes the former room collection and API names; update both packages together.

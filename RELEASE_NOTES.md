@@ -1,11 +1,12 @@
-# Interactive Fiction v3.0.0
+# Interactive Fiction v3.1.0
 
-Scenery uses the same terminology throughout the model, runtime, rules and browser.
+World authoring now has a packaged JSON Schema and a complete attribute reference.
 
-- Use `examineScenery`, `getRoomScenery`, and `showSceneryModal`.
-- Room features remain in `room.scenery` at runtime.
-- Inline links expose `sceneryKey`; scenery link targets use `type: 'scenery'` and `scenery`.
-- World schema version is 2; the save envelope remains version 1.
-- Update both engine and browser packages together. Previous scenery API names and world schema 1 saves are not supported.
+- Required/optional fields, types, defaults and constraints are documented by element.
+- Builds validate parsed JSON5 before normalization.
+- The engine exports world.schema.json for authoring tools.
+- The reference is generated from schema descriptions and checked in tests.
+- Custom game state remains supported on extensible elements.
+- Runtime gameplay and world/save schema versions are unchanged.
 
-Examination, discovery rules, room-local IDs and named prose retain their behaviour.
+Install both packages together. Malformed authoring fields that were previously ignored can now fail a build.
