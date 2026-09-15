@@ -110,6 +110,6 @@ Images must be local, included in configured public directories. Output is a sep
 
 ## Transport requests
 
-`game.getTransport(id)` returns live transport state. `game.requestTransport({transport, destination, actor?, dwell?, condition?, effects?})` queues a request and returns whether it was accepted. The destination is a stop ID. Requesting does not itself consume a turn; use it inside a dispatched, committed interaction. Transport advancement uses the engine's normal turn scheduler. Reacquire state references after loading.
+`game.getTransport(id)` returns live transport state. `game.requestTransport({transport, destination, actor?, dwell?, condition?, effects?})` queues a request and returns whether it was accepted. The destination is a stop ID. For array-authored stops this is the room ID, never an array index. Requesting does not itself consume a turn; use it inside a dispatched, committed interaction. Transport advancement uses the engine's normal turn scheduler. Reacquire state references after loading.
 
 The engine emits `transportDeparted` and `transportArrived` facts. Room-backed boarding spaces and automatic boarding connections are supported. See the [complete transport reference](feature-reference.md#transport) for defaults, events, NPC routes and validation.

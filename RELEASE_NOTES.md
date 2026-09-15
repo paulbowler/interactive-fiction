@@ -1,8 +1,8 @@
-# Interactive Fiction v1.6.0
+# Interactive Fiction v1.6.1
 
-Transports now have independent identities, room-backed boarding spaces and named stops. Panels and other controls request journeys through the controller. The engine derives boarding connections, validates journey state, preserves queues and supports physical NPC journeys without assuming floors or door hardware.
+Transport stops now accept the compact authoring form `stops: ['harbour', 'island']` when stop IDs match room IDs. The loader expands this to the existing dictionary. Dictionary syntax remains available for distinct stop IDs and additional declarative attributes. Empty arrays, duplicate IDs, invalid entry types and broken references fail clearly.
 
-Use `game.getTransport(id)` and `game.requestTransport({transport, destination, actor})`. Departure and arrival events expose world transitions. Container- and supporter-backed boarding spaces are explicitly unsupported in this release. Existing v1 APIs and saves remain supported; runtime schema and save format remain 1.
+This is an authoring-only simplification. Transport requests, journey timing, controller behavior, runtime schema and saves remain unchanged. Model, transport API and tutorial documentation cover both forms and the room-backed boarding scope.
 
 The two MIT-licensed packages are:
 
@@ -12,7 +12,7 @@ The two MIT-licensed packages are:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.0/paulbowler-if-engine-1.6.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.0/paulbowler-if-browser-1.6.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.1/paulbowler-if-engine-1.6.1.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.1/paulbowler-if-browser-1.6.1.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

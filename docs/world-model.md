@@ -89,7 +89,7 @@ Put capabilities directly on an object; there is no authoring `properties` wrapp
 
 Supporters need neither `container: true` nor `opened: true`. They cannot be openable, lockable, locked or explicitly closed. A container may be open without supporting an Open action: an open bag can declare `container: true, opened: true`. A container without `opened` or `transparent` has inaccessible contents; declare `openable: true` when players should be able to open it. `transparent: true` follows the engine's accessible-content semantics, so do not use it to model a sealed glass barrier.
 
-An object cannot be both a door and a container, or start both open and locked. Containers can specify `accepts`, `insertable`, `transparent`, `takeLabel` and opening/locking prose directly. Structured capabilities such as `readable: { text: '...' }`, `passage: { destination: 'hall' }` and `transport: { ... }` retain their own configuration objects. Story flags can also be flat fields. Names, articles, descriptions, detail and image fields are presentation attributes.
+An object cannot be both a door and a container, or start both open and locked. Containers can specify `accepts`, `insertable`, `transparent`, `takeLabel` and opening/locking prose directly. Structured capabilities such as `readable: { text: '...' }` and `passage: { destination: 'hall' }` retain their own configuration objects. Declare vehicles in the top-level `transports` collection, separately from control objects. Story flags can also be flat fields. Names, articles, descriptions, detail and image fields are presentation attributes.
 
 ## Descriptions
 
@@ -156,6 +156,6 @@ Use an optional `prose` dictionary for named report strings or lists of strings.
 
 ## Transport entities
 
-Use `transports` for named vehicles or conveyances with a boarding space and defined stops. Each transport owns its journey state; its `space: {room: 'interiorId'}` owns the occupants through normal room containment. Stops map stable stop IDs to ordinary room IDs. The normalizer supplies empty journey bookkeeping and creates inspectable boarding connections. Controls and exceptional journey rules stay in JavaScript, with all report text in named model prose. See the [transport schema, defaults and controller API](feature-reference.md#transport).
+Use `transports` for named vehicles or conveyances with a boarding space and defined stops. Each transport owns its journey state; its `space: {room: 'interiorId'}` owns the occupants through normal room containment. Stops map stable stop IDs to ordinary room IDs. When the IDs match, write `stops: ['westBank', 'eastBank']`; otherwise use `stops: {west: {room: 'westBank'}, east: {room: 'eastBank'}}`. The normalizer expands arrays into the same runtime dictionary without changing IDs or saves. The normalizer supplies empty journey bookkeeping and creates inspectable boarding connections. Controls and exceptional journey rules stay in JavaScript, with all report text in named model prose. See the [transport schema, defaults and controller API](feature-reference.md#transport).
 
 Room-backed spaces are supported now. Enterable-container and rideable-supporter spaces are not yet supported and are rejected rather than treated as rooms.

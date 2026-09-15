@@ -81,3 +81,23 @@ test('NPC routes use transport IDs and map room destinations to named stops',()=
     assert.equal(game.findItem('courier').owner.key,'westBank');
     assert.equal(game.findItem('courier').item.properties.npc.mission.active,false);
 });
+
+
+test('stop arrays normalize identically to dictionaries and share saved journeys',()=>{
+    const compact=world();compact.transports.ferry.stop='westBank';compact.transports.ferry.stops=['westBank','eastBank'];
+    const explicit=structuredClone(compact);explicit.transports.ferry.stops={westBank:{room:'westBank'},eastBank:{room:'eastBank'}};
+    const before=structuredClone(compact);
+    assert.deepEqual(normaliseWorld(compact),normaliseWorld(explicit));assert.deepEqual(compact,before);
+    const a=createGame(compact),b=createGame(explicit);
+    for(const g of [a,b]) {g.dispatch({type:'start'});g.requestTransport({transport:'ferry',destination:'eastBank'});g.dispatch({type:'wait'});}
+    assert.deepEqual(a.save(),b.save());
+    const restored=createGame(compact).load(b.save());restored.dispatch({type:'wait'});a.dispatch({type:'wait'});
+    assert.deepEqual(restored.save(),a.save());assert.equal(restored.getTransport('ferry').stop,'eastBank');
+});
+
+test('stop arrays reject empty lists, duplicates, non-string IDs and broken room references',()=>{
+    for(const stops of [[],['westBank','westBank'],[null],[3],[{}],[''],['missing'],['deck'],['__proto__']]) {
+        const input=world();input.transports.ferry.stop='westBank';input.transports.ferry.stops=stops;
+        assert.throws(()=>normaliseWorld(input),/Invalid world at transports\.ferry\.stops/);
+    }
+});

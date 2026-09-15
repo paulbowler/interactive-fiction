@@ -444,13 +444,22 @@ transports: {
 },
 ```
 
+When stop IDs match room IDs, use the compact form:
+
+```json5
+stops: ['westBank', 'eastBank'],
+stop: 'westBank',
+```
+
+This expands to `stops: {westBank: {room: 'westBank'}, eastBank: {room: 'eastBank'}}`. Use the dictionary form above when stop IDs differ from room IDs or a stop has additional declarative attributes. Both forms produce the same canonical dictionary when they describe the same IDs and fields. Requests and saves always use stop IDs; array positions have no identity. IDs remain unchanged when translating display text. Empty arrays, duplicate IDs, non-string entries and unknown room references are rejected. This shorthand is authoring syntax; saved runtime state continues to use the dictionary.
+
 Declare `ferryDeck`, `westBank` and `eastBank` as ordinary rooms. Put occupants and cargo in the deck's normal collections; do not also list passengers on the transport. A stop ID is a persistent reference, independent of its room ID and display name.
 
 | Field | Meaning |
 | --- | --- |
 | `name` | Optional display name |
 | `space` | Required `{room: 'roomId'}` boarding space |
-| `stops` | Nonempty dictionary of named stops, each with `{room: 'roomId'}` |
+| `stops` | Nonempty array of room IDs, or a dictionary of named stops with `{room: 'roomId'}` |
 | `stop` | Required initial/current stop ID; remains the origin while travelling |
 | `boardingOpen` | Whether boarding/leaving is possible while idle; defaults to `true` |
 | `blockedMessage` | Optional model text used when the boarding connection is unavailable |

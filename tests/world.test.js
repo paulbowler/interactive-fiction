@@ -169,3 +169,22 @@ test('JSON5 scenery compiles without changing IDs or prose',async t=>{
     assert.equal(world.rooms.gallery.scenery,undefined);
     assert.equal(world.rooms.gallery.clues['wall-art'].title,'Mural');
 });
+
+
+test('JSON5 loader expands compact transport stops into the canonical dictionary',async()=>{
+    const dir=await fs.mkdtemp(path.join(os.tmpdir(),'if-stop-array-'));
+    try {
+        const file=path.join(dir,'world.json5');
+        await fs.writeFile(file,`{
+            title:'Crossing', player:{room:'bank'}, rooms:{bank:{},island:{},deck:{}},
+            transports:{ferry:{space:{room:'deck'},stop:'bank',stops:[
+                'bank', // Stable IDs, not display labels.
+                'island',
+            ]}},
+        }`);
+        const model=await loadWorld(file);
+        assert.deepEqual(model.transports.ferry.stops,{bank:{room:'bank'},island:{room:'island'}});
+        assert.deepEqual(model.rooms.deck.exits.island.transport,{id:'ferry',stop:'island'});
+        assert.deepEqual(normaliseWorld(model),model);
+    } finally {await fs.rm(dir,{recursive:true,force:true});}
+});

@@ -78,8 +78,19 @@ export function validateTransports(model, connections = true) {
 
 export function normaliseTransports(model) {
     if (model.transports === undefined) return;
-    for (const t of Object.values(model.transports || {})) {
+    for (const [id,t] of Object.entries(model.transports || {})) {
         if (!t || typeof t !== 'object' || Array.isArray(t)) continue;
+        if (Array.isArray(t.stops)) {
+            const seen = new Set();
+            t.stops = Object.fromEntries(t.stops.map((room,index) => {
+                const path = `transports.${id}.stops.${index}`;
+                if (typeof room !== 'string' || !room.trim()) throw new Error(`Invalid world at ${path}: expected a room ID string`);
+                if (seen.has(room)) throw new Error(`Invalid world at ${path}: duplicate stop ${room}`);
+                if (['__proto__','constructor','prototype'].includes(room)) throw new Error(`Invalid world at ${path}: unsafe stop ID`);
+                seen.add(room);
+                return [room,{room}];
+            }));
+        }
         if (t.boardingOpen === undefined) t.boardingOpen = true;
         if (t.phase === undefined) t.phase = 'idle';
         if (t.queue === undefined) t.queue = [];

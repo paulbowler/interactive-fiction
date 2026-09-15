@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.1
+
+- Author transport stops as an array of room IDs when stop and room IDs match.
+- Normalize to the existing dictionary; controller APIs and saved journeys remain unchanged.
+- Validate duplicate, empty, invalid and unknown stop references.
+- Document both authoring forms in the model reference, tutorial and transport API.
+
 ## 1.6.0
 
 - Independent transport entities reference a room-backed boarding space and named stops.
