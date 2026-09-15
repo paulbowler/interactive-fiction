@@ -3,7 +3,7 @@ export function findEntity(model, id, includePrototypes = false) {
     if (typeof id !== 'string') return undefined;
     const colon = id.indexOf(':');
     if (colon !== -1) {
-        const scenery = model.rooms?.[id.slice(0, colon)]?.clues?.[id.slice(colon + 1)];
+        const scenery = model.rooms?.[id.slice(0, colon)]?.scenery?.[id.slice(colon + 1)];
         if (scenery) return scenery;
     }
     if (Object.hasOwn(model.rooms || {}, id)) return model.rooms[id];

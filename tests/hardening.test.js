@@ -19,19 +19,20 @@ test('invalid or foreign saves leave the running game untouched',()=>{
     const game=fresh(),before=game.save();
     for(const change of [
         s=>{s.rooms.study.description=[{condition:{predicate:'unknown'},text:'x'}];},s=>{s.id='another-story';},s=>{s.runtime.saveFormatVersion=2;},s=>{s.runtime.turn=-1;},
-        s=>{s.runtime.randomSeed=2**32;},s=>{s.runtime.scheduled=[{id:1,due:2,event:'x'}];},
+        s=>{s.runtime.worldSchemaVersion=1;},s=>{s.rooms.study.clues={};},s=>{s.runtime.randomSeed=2**32;},s=>{s.runtime.scheduled=[{id:1,due:2,event:'x'}];},
         s=>{s.player.pendingAction={type:'completeMove',exitKey:'missing',exitDefinition:{}};}
     ]) {const save=structuredClone(before);change(save);assert.throws(()=>game.load(save));assert.deepEqual(game.save(),before);}
-    assert.throws(()=>createGame({...world,schemaVersion:2}),/Unsupported/);
+    assert.throws(()=>createGame({...world,schemaVersion:3}),/Unsupported/);
 });
 
-test('initial random seed and v1 saves survive compatible engine updates',()=>{
+test('initial random seed and current saves survive compatible engine updates',()=>{
     const game=createGame(world,{seed:42}),saved=game.save();
     assert.equal(saved.runtime.randomSeed,42);
     assert.equal(saved.runtime.saveFormatVersion,1);
+    assert.equal(saved.runtime.worldSchemaVersion,2);
     assert.deepEqual(fresh().load(saved).save(),saved);
-    const legacy=structuredClone(world);delete legacy.runtime;
-    assert.equal(fresh().load(legacy).save().runtime.saveFormatVersion,1);
+    const unversioned=structuredClone(world);delete unversioned.runtime;
+    assert.equal(fresh().load(unversioned).save().runtime.saveFormatVersion,1);
 });
 
 test('registration and malformed requests fail clearly without losing dispatcher availability',()=>{

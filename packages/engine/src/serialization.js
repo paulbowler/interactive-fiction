@@ -24,12 +24,14 @@ export function cloneSerializable(value) {
 }
 
 export function validateRuntime(model) {
+    for (const [id, room] of Object.entries(model.rooms || {}))
+        if (Object.hasOwn(room, 'clues')) throw new Error(`Invalid world at rooms.${id}.clues: use scenery`);
     const runtime = model.runtime;
-    if (model.schemaVersion !== undefined && model.schemaVersion !== 1) throw new Error('Unsupported world schema version');
+    if (model.schemaVersion !== undefined && model.schemaVersion !== 2) throw new Error('Unsupported world schema version');
     if (runtime === undefined) return;
     if (!runtime || typeof runtime !== 'object' || Array.isArray(runtime)) throw new Error('Invalid runtime state');
-    for (const key of ['saveFormatVersion', 'worldSchemaVersion'])
-        if (runtime[key] !== undefined && runtime[key] !== 1) throw new Error(`Unsupported ${key}`);
+    for (const [key, version] of Object.entries({saveFormatVersion: 1, worldSchemaVersion: 2}))
+        if (runtime[key] !== undefined && runtime[key] !== version) throw new Error(`Unsupported ${key}`);
     for (const key of ['turn', 'nextScheduleId', 'randomSeed'])
         if (runtime[key] !== undefined && (!Number.isSafeInteger(runtime[key]) || runtime[key] < 0)) throw new Error(`Invalid runtime ${key}`);
     if (runtime.randomSeed > 0xffffffff) throw new Error('Invalid runtime randomSeed');

@@ -35,7 +35,7 @@ export function validateWorldDescriptions(world) {
     }
     for (const [id, room] of Object.entries(world.rooms || {})) {
         entity(room, `rooms.${id}`);
-        for (const [key, clue] of Object.entries(room?.clues || {})) entity(clue, `rooms.${id}.clues.${key}`);
+        for (const [key, scenery] of Object.entries(room?.scenery || {})) entity(scenery, `rooms.${id}.scenery.${key}`);
         for (const [key, feature] of Object.entries(room?.scenery || {})) entity(feature, `rooms.${id}.scenery.${key}`);
         items(room?.items, `rooms.${id}.items`);
     }
@@ -48,7 +48,7 @@ export function createDescriptions(game) {
     const resolvers = new Map(), resolving = new Set();
     function resolve(id, entity, separateSentences = true) {
         const description = entity?.description;
-        validateDescription(description, id || 'clue');
+        validateDescription(description, id || 'scenery');
         if (description === undefined || typeof description === 'string')
             return game.buildConditionalText(description, separateSentences);
         const catalog = variantCatalog(description, id);
@@ -85,13 +85,13 @@ export function createDescriptions(game) {
             return resolve(id, entity, !Object.hasOwn(game.state.rooms, id));
         },
         resolve,
-        clue(clue) {
+        scenery(scenery) {
             for (const [room, definition] of Object.entries(game.state.rooms)) {
-                for (const [key, candidate] of Object.entries(definition.clues || {})) {
-                    if (candidate === clue) return resolve(`${room}:${key}`, clue);
+                for (const [key, candidate] of Object.entries(definition.scenery || {})) {
+                    if (candidate === scenery) return resolve(`${room}:${key}`, scenery);
                 }
             }
-            return resolve(undefined, clue);
+            return resolve(undefined, scenery);
         }
     };
 }

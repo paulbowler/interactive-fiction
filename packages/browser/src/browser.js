@@ -297,7 +297,7 @@ function generateRoomDescription(roomKey) {
     getRoomDescriptionParts(roomKey).forEach((part) => {
         const paragraph = document.createElement('p');
         paragraph.className = part.type === 'npcNearby' ? 'npc-proximity-cue' : 'room-description-paragraph';
-        renderTextWithExamineLinks(paragraph, part.text, room.clues || {});
+        renderTextWithExamineLinks(paragraph, part.text, room.scenery || {});
         descriptionElement.appendChild(paragraph);
     });
 }
@@ -316,10 +316,10 @@ function appendProseText(parent, text) {
     if (text) parent.appendChild(document.createTextNode(text));
 }
 
-function renderTextWithExamineLinks(container, text, clues) {
+function renderTextWithExamineLinks(container, text, scenery) {
     container.innerHTML = '';
 
-    parseExamineLinks(text, clues).forEach((part) => {
+    parseExamineLinks(text, scenery).forEach((part) => {
         if (part.type === 'text') {
             appendProseText(container, part.text);
             return;
@@ -333,7 +333,7 @@ function renderTextWithExamineLinks(container, text, clues) {
             return;
         }
 
-        const target = getExamineLinkTarget(part.clueKey, clues);
+        const target = getExamineLinkTarget(part.sceneryKey, scenery);
         if (!target) {
             container.appendChild(document.createTextNode(part.text));
             return;
@@ -349,8 +349,8 @@ function renderTextWithExamineLinks(container, text, clues) {
 }
 
 function openExamineLinkTarget(target) {
-    if (target.type === 'clue') {
-        game.dispatch({ type: 'examineClue', target: clueId(target.clue) });
+    if (target.type === 'scenery') {
+        game.dispatch({ type: 'examineScenery', target: sceneryId(target.scenery) });
     } else if (target.type === 'item' && getExamineLinkTarget(`item:${target.itemKey}`, {})) {
         closeMessageModal();
         showItemModal(target.itemKey);
@@ -1466,7 +1466,7 @@ function showItemChoiceOptions(itemKey, choiceIndex) {
     return options;
 }
 
-function displayMessageModal(message, title = 'Not Yet', clues = null, noteSources = [], inputSources = []) {
+function displayMessageModal(message, title = 'Not Yet', scenery = null, noteSources = [], inputSources = []) {
     const messageModal = document.getElementById('messageModal');
     const messageTitle = document.getElementById('message-title');
     const messageText = document.getElementById('message-text');
@@ -1476,7 +1476,7 @@ function displayMessageModal(message, title = 'Not Yet', clues = null, noteSourc
     }
 
     if (messageText) {
-        renderTextWithExamineLinks(messageText, message, clues || {});
+        renderTextWithExamineLinks(messageText, message, scenery || {});
     }
 
     const actions = document.getElementById('message-actions');
@@ -1517,10 +1517,10 @@ function closeItemModal() {
     closeModal('itemModal');
 }
 
-function clueId(clue) {
+function sceneryId(scenery) {
     for (const [room, definition] of Object.entries(game.state.rooms))
-        for (const [id, candidate] of Object.entries(definition.clues || {}))
-            if (candidate === clue) return `${room}:${id}`;
+        for (const [id, candidate] of Object.entries(definition.scenery || {}))
+            if (candidate === scenery) return `${room}:${id}`;
     return null;
 }
 function handleItemAction(action, target) {

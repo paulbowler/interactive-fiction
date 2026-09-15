@@ -74,7 +74,7 @@ try {
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
-    assert.equal((await state()).rooms.study.clues.mural.examined,true);
+    assert.equal((await state()).rooms.study.scenery.mural.examined,true);
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     await page.reload();
@@ -84,7 +84,7 @@ try {
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.dusk);
-    assert.equal((await state()).rooms.study.clues.mural.examined,true);
+    assert.equal((await state()).rooms.study.scenery.mural.examined,true);
     assert.equal((await state()).rooms.study.imageVariants[0].id,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');

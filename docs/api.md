@@ -14,9 +14,9 @@ No deep source imports are public. The engine has no DOM, Node or story dependen
 
 Author worlds in JSON5 with flat capabilities, nested `items`, and `player.room`. Only `title`, `player.room` and `rooms` are required. IDs and references remain strings; capabilities use booleans. Defaults supply empty collections, initial timing and ordinary open/locked state. See the [world-model guide](world-model.md) for the complete contract and `examples/study/data/game.json5` for a runnable example.
 
-`normaliseWorld(data)` clones and validates an authoring model into canonical runtime schema 1. `createGame` calls it automatically. Canonical world/state input is cloned unchanged; normalization is idempotent. Runtime objects use `properties`, containers use `properties.container.items`, doors use `properties.door`, and the player uses `currentRoom`. Ownership is the containing collection, with `findItem` providing a location query. No separate mutable location map is maintained.
+`normaliseWorld(data)` clones and validates an authoring model into canonical runtime schema 2. `createGame` calls it automatically. Canonical world/state input is cloned unchanged; normalization is idempotent. Runtime objects use `properties`, containers use `properties.container.items`, doors use `properties.door`, and the player uses `currentRoom`. Ownership is the containing collection, with `findItem` providing a location query. No separate mutable location map is maintained.
 
-Descriptions accept strings or named variants selected by controller resolvers. Exceptional action effects and puzzle rules belong in JavaScript. Persisted data must be JSON-compatible; undefined values, functions, dates, accessors, cycles, non-finite numbers and unsafe object keys are rejected. Optional `schemaVersion` is 1; authoring syntax, package versions and save formats are independent.
+Descriptions accept strings or named variants selected by controller resolvers. Exceptional action effects and puzzle rules belong in JavaScript. Persisted data must be JSON-compatible; undefined values, functions, dates, accessors, cycles, non-finite numbers and unsafe object keys are rejected. Optional `schemaVersion` is 2; authoring syntax, package versions and save formats are independent.
 
 For the field-by-field feature families, supported controller configuration, and behavioral limits, see the [feature reference](feature-reference.md). For adding actions or capabilities, see [Extending the platform](extending.md).
 
@@ -26,12 +26,12 @@ For the field-by-field feature families, supported controller configuration, and
 
 `dispatch({type, actor:'player', target, secondaryTarget, ...})` is synchronous. Targets are IDs. Only player actor dispatch is supported. It returns `{action, status, success, messages, value, choices}`. `success` means the action committed, including an explicitly committed replacement; a free query such as `look` returns its value without a successful mutation. Message entries contain `{type:'message', args:[text,title,...]}` for rendering by the view.
 
-Canonical types include `start`, `go`, `look`, `examine`, `examineClue`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; display-oriented action aliases are also accepted.
+Canonical types include `start`, `go`, `look`, `examine`, `examineScenery`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; display-oriented action aliases are also accepted.
 
 - `go.target`: destination room ID, connected from the current room.
 - `unlock.target`: container/door; `secondaryTarget`: held matching key.
 - Placement and `useOn`: primary object in `target`, destination in `secondaryTarget`.
-- `examineClue.target`: `room-id:scenery-id`. Examines a feature authored in room `scenery`; the canonical runtime collection is `clues`.
+- `examineScenery.target`: `room-id:scenery-id`. Examines a feature authored in room `scenery`; the runtime collection is also `scenery`.
 - `choose`: named `choice` ID (or zero-based `index`).
 - `tool`: named `option` ID and `secondaryTarget` (or a menu `index`).
 - `chooseOption`: named `choice` and `option` IDs (or `choiceIndex` and `optionIndex`).
@@ -60,7 +60,7 @@ Controllers can use these generic helpers: `findItem` (item and owner location),
 
 ## Description resolvers
 
-`game.describe(id, synchronousResolver)` registers one selector for a room ID, object ID or `roomID:clueID`. It returns an unsubscribe function. Register selectors during game initialization, including in runtimes that will load a save. Duplicate registrations, asynchronous handlers and recursive description queries are rejected. Registration may precede creation of a dynamic object.
+`game.describe(id, synchronousResolver)` registers one selector for a room ID, object ID or `roomID:sceneryID`. It returns an unsubscribe function. Register selectors during game initialization, including in runtimes that will load a save. Duplicate registrations, asynchronous handlers and recursive description queries are rejected. Registration may precede creation of a dynamic object.
 
 ```js
 game.describe('study', ctx => ctx.state.player.dusk ? 'dusk' : 'default');
@@ -72,9 +72,9 @@ The entity's `description` is a string, an array of `{id, text}` alternatives, o
 
 The resolver receives the ordinary context with `action.type: 'describe'`, the entity ID in `action.target`, the current entity in `target`, and its initial definition in `definition` when available. `room` is the player's current room, even when querying another room. `state`, `world` and `game` are available. Object capabilities use canonical `properties` paths. Always use the supplied current context rather than capturing mutable entity references across loads.
 
-Resolvers are trusted synchronous functions, not sandboxed expressions. They should only read state and return an ID: do not mutate state, dispatch, emit, commit, schedule or consume randomness from a description resolver. Rendering can call them repeatedly. Selection itself does not advance time, cache prose or alter saves. Examination may independently mark a clue as examined before resolving its text.
+Resolvers are trusted synchronous functions, not sandboxed expressions. They should only read state and return an ID: do not mutate state, dispatch, emit, commit, schedule or consume randomness from a description resolver. Rendering can call them repeatedly. Selection itself does not advance time, cache prose or alter saves. Examination may independently mark a scenery as examined before resolving its text.
 
-`getDescription(id)` queries base text for a current room, live object or clue; unknown targets throw. It is not an accessibility check. Standard rendering adds its existing annotations and cues separately. A controller may deliberately replace a runtime `description` with plain text; this is saved state and bypasses its registered resolver. Prefer selectors for prose derived from facts so there is no second state value to synchronize.
+`getDescription(id)` queries base text for a current room, live object or scenery; unknown targets throw. It is not an accessibility check. Standard rendering adds its existing annotations and cues separately. A controller may deliberately replace a runtime `description` with plain text; this is saved state and bypasses its registered resolver. Prefer selectors for prose derived from facts so there is no second state value to synchronize.
 
 ## Events, turns and saves
 
@@ -82,7 +82,7 @@ Resolvers are trusted synchronous functions, not sandboxed expressions. They sho
 
 `schedule.afterTurns(turns,name,jsonData)` returns a job ID; `schedule.cancel(id)` cancels it. Zero means next successful turn. Jobs, IDs and random seed live in saved runtime data. Re-register event listeners after constructing a runtime. Each turn advances transports, timers and missions in that order. A newly started timer has a one-update grace period.
 
-`save()` returns a deep JSON copy with runtime `saveFormatVersion:1` and `worldSchemaVersion:1`. `load(saved)` validates and clones before replacing state, returns the game, and rejects another game's identity or unsupported future formats. Saves without explicit format metadata are interpreted as format 1 and validated. `state` references must be reacquired after load. Predicates/listeners are configuration and are registered anew, not saved. The package version is intentionally not used to reject saves.
+`save()` returns a deep JSON copy with runtime `saveFormatVersion:1` and `worldSchemaVersion:2`. `load(saved)` validates and clones before replacing state, returns the game, and rejects another game's identity or unsupported formats. Saves without explicit format metadata are interpreted as format 1 and validated. `state` references must be reacquired after load. Predicates/listeners are configuration and are registered anew, not saved. The package version is intentionally not used to reject saves.
 
 Browser automatic save selection also checks the story's string `version`. Keep it stable for compatible prose/engine updates, or supply a story migration when changing it. Save migrations are owned by the game controller.
 
@@ -142,7 +142,7 @@ For note discovery, `available('record', sourceID, predicate)` is also checked
 by `canRecordNote` and message-popup note buttons. Notebook ownership, access,
 open state and duplicate-note prevention remain standard engine semantics.
 
-An `after('examine', ...)` or `after('examineClue', ...)` rule can adjust
+An `after('examine', ...)` or `after('examineScenery', ...)` rule can adjust
 `ctx.response.description` before the view receives the examination response.
 Scenery examination targets use `room:scenery` IDs and resolve to the scenery
 object in `ctx.target`. Persist any once-only discovery fact in state; the

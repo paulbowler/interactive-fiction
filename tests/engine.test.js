@@ -230,15 +230,15 @@ test('one request commits at most one turn even when a consequence also commits'
 
 test('examination rules receive scenery and can complete its response before display', () => {
     const model=structuredClone(world);
-    model.rooms.study.clues={painting:{title:'Painting',description:'A painted landscape.'}};
+    model.rooms.study.scenery={painting:{title:'Painting',description:'A painted landscape.'}};
     const game=createGame(model);
-    game.after('examineClue','study:painting',ctx=>{
+    game.after('examineScenery','study:painting',ctx=>{
         assert.equal(ctx.target.title,'Painting');
         assert.equal(ctx.target.examined,true);
         ctx.response.description+=' A signature catches your eye.';
         ctx.state.player.sawSignature=true;
     });
-    const result=game.dispatch({type:'examineClue',target:'study:painting'});
+    const result=game.dispatch({type:'examineScenery',target:'study:painting'});
     assert.equal(result.success,true);
     assert.equal(game.state.player.elapsedMinutes,0);
     assert.equal(result.messages[0].args[0],'A painted landscape. A signature catches your eye.');
@@ -275,8 +275,8 @@ test('replacement rules cannot act on an out-of-scope object or scenery', () => 
     game.state.player.currentRoom='hall';
     assert.equal(game.dispatch({type:'take',target:'brass-key'}).status,STOP);
     assert.equal(ran,0);
-    game.after('examineClue','study:unknown',()=>{ran++;});
-    assert.equal(game.dispatch({type:'examineClue',target:'study:unknown'}).status,STOP);
+    game.after('examineScenery','study:unknown',()=>{ran++;});
+    assert.equal(game.dispatch({type:'examineScenery',target:'study:unknown'}).status,STOP);
     assert.equal(ran,0);
 });
 

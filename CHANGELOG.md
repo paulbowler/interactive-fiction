@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0
+
+Use scenery consistently across runtime state, examination actions and browser links. World schema 2 removes the former room collection and API names; update both packages together.
+
 ## 2.1.0
 
 - Share entity lookup between description resolution and controller queries.

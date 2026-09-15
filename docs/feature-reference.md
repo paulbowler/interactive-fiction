@@ -71,11 +71,11 @@ Reading, climb feedback and actor report text accept strings or arrays containin
 
 In room/examination prose, `[[sceneryID]]` displays the current scenery `name`, falling back to `title` and then the ID. Capitalization is used exactly as authored. `[[item:objectID]]` uses the object name. `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after engine text selection.
 
-Room `scenery` contains examinable features such as murals, windows and notices. A feature need not reveal a clue. Its ID is local to its room; use `roomID:sceneryID` for description resolvers. Omit the collection when there are no features. Do not declare both `scenery` and `clues` in one room.
+Room `scenery` contains examinable features such as murals, windows and notices. Its ID is local to its room; use `roomID:sceneryID` for description resolvers. Omit the collection when there are no features.
 
-The loader compiles room `scenery` to the canonical `rooms[roomID].clues` collection. Controllers use that runtime path; there is only one mutable collection. The examination action retains the public name `examineClue`:
+Room scenery remains in `rooms[roomID].scenery` at runtime. Controllers and views use this same collection. Examine it through the dispatcher:
 
-`dispatch({type:'examineClue', target:'gallery:mural'})` marks `feature.examined` and normally saves without advancing time. Use rules on `examineClue` for discovery consequences. An after rule can record a discovery flag and call `ctx.commit()` when that discovery costs a turn. `examined` is runtime progress.
+`dispatch({type:'examineScenery', target:'gallery:mural'})` marks `feature.examined` and normally saves without advancing time. Use rules on `examineScenery` for discovery consequences. An after rule can record a discovery flag and call `ctx.commit()` when that discovery costs a turn. `examined` is runtime progress.
 
 For scenery with ordinary actions (opening a window, pushing a statue), declare an object in room `items` instead. Its optional `scenery: true` flag suppresses automatic listing while preserving normal actions. Room `scenery` and the object listing flag have different roles; neither implies a puzzle reward or discovery.
 

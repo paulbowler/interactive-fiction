@@ -4,7 +4,7 @@ import { createGame, normaliseWorld } from '../packages/engine/index.js';
 const world = () => ({
     title:'The Workshop', player:{room:'workshop'},
     rooms:{workshop:{name:'Workshop',description:{default:'A quiet workshop.',night:'The workshop is dark.'},
-        clues:{mural:{title:'Mural',description:{default:'A faded mural.',revealed:'A ship beneath the paint.'}}},
+        scenery:{mural:{title:'Mural',description:{default:'A faded mural.',revealed:'A ship beneath the paint.'}}},
         items:{box:{name:'Box',container:true,openable:true,description:{default:'The box is closed.',opened:'The box is open.'},
             items:{note:{name:'Note',portable:true,description:{default:'A folded note.',held:'A note in your hand.'}}}},
             key:{name:'Key',portable:true,description:'A brass key.'}}}}
@@ -26,7 +26,7 @@ test('strings and variant defaults work without a resolver and normalization pre
     game.describe('key',()=>{throw new Error('Strings should not call a resolver');});
     assert.equal(game.getDescription('key'),'A brass key.');
 });
-test('room, item and clue rendering resolve current facts without caching or advancing time',()=>{
+test('room, item and scenery rendering resolve current facts without caching or advancing time',()=>{
     const game=create(), initial=game.save();
     assert.equal(game.getRoomDescriptionText('workshop'),'A quiet workshop.');
     assert.equal(game.getItemDescription('box',game.findItem('box').item),'The box is closed.');
@@ -35,8 +35,8 @@ test('room, item and clue rendering resolve current facts without caching or adv
     assert.equal(game.dispatch({type:'look'}).value,'The workshop is dark.');
     assert.ok(game.dispatch({type:'open',target:'box'}).success);
     assert.equal(game.dispatch({type:'examine',target:'box'}).value.description,'The box is open.');
-    const clue=game.dispatch({type:'examineClue',target:'workshop:mural'});
-    assert.equal(clue.messages[0].args[0],'A ship beneath the paint.');
+    const scenery=game.dispatch({type:'examineScenery',target:'workshop:mural'});
+    assert.equal(scenery.messages[0].args[0],'A ship beneath the paint.');
     assert.equal(game.state.player.elapsedMinutes,1,'examination remains free');
     assert.equal(game.getDescription('note'),'A folded note.');
     game.dispatch({type:'take',target:'note'});
@@ -74,8 +74,8 @@ test('invalid definitions fail in authoring, canonical input and atomic save loa
         assert.deepEqual(game.save(),before);
         assert.throws(()=>createGame(saved),/Invalid description.*box/);
     }
-    const badClue=world();badClue.rooms.workshop.clues.mural.description={a:'No default'};
-    assert.throws(()=>normaliseWorld(badClue),/clues.mural.description/);
+    const badScenery=world();badScenery.rooms.workshop.scenery.mural.description={a:'No default'};
+    assert.throws(()=>normaliseWorld(badScenery),/scenery.mural.description/);
 });
 test('bad resolver results, asynchronous handlers, duplicates and cycles fail clearly',()=>{
     const game=createGame(world());
@@ -105,7 +105,7 @@ test('executable description segments are rejected in worlds and saved state',()
 test('named description arrays select one variant with stable IDs and a required default',()=>{
     const model=world();
     const convert=entity=>{entity.description=Object.entries(entity.description).map(([id,text])=>({id,text}));};
-    convert(model.rooms.workshop);convert(model.rooms.workshop.clues.mural);convert(model.rooms.workshop.items.box);
+    convert(model.rooms.workshop);convert(model.rooms.workshop.scenery.mural);convert(model.rooms.workshop.items.box);
     const game=createGame(model);
     game.describe('box',ctx=>ctx.target.properties.container.opened ? 'opened' : undefined);
     assert.equal(game.getDescription('box'),'The box is closed.');

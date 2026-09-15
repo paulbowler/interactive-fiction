@@ -6,7 +6,7 @@ export function normalizeAction(request) {
     const colon = action.type.indexOf(':');
     const type = colon === -1 ? action.type : action.type.slice(0, colon);
     const suffix = colon === -1 ? undefined : action.type.slice(colon + 1);
-    // Clue targets contain a colon but action names do not consume that target.
+    // Scenery targets contain a colon but action names do not consume that target.
     const aliases = { 'take out': 'take', removeFrom: 'take', 'climb down': 'climbDown', 'turn on': 'turnOn', 'turn off': 'turnOff', choice: 'choose', toolAction: 'tool', put: 'putIn', insert: 'useOn' };
     action.type = aliases[type] || type;
     if (suffix !== undefined) {
@@ -69,8 +69,8 @@ export function installDispatcher(game) {
         acknowledgeMessage: () => game.acknowledgeMessage(),
         acknowledgeEnding: () => game.acknowledgeEndingEncounter(),
         examine: ctx => game.examineItem(ctx.action.target),
-        examineClue: ctx => { const [room, clue] = (ctx.action.target || '').split(':');
-            if (room === game.state.player.currentRoom) return game.examineClue(game.getRoomClue(room, clue)); },
+        examineScenery: ctx => { const [room, scenery] = (ctx.action.target || '').split(':');
+            if (room === game.state.player.currentRoom) return game.examineScenery(game.getRoomScenery(room, scenery)); },
         chooseOption: ctx => game.chooseItemOption(ctx.action.target, ctx.action.choiceIndex, ctx.action.optionIndex),
         submitInput: ctx => game.submitTextInput(ctx.action.target, ctx.action.value),
         enterText: ctx => game.enterRecordedText(ctx.action.target, ctx.action.secondaryTarget),
@@ -96,9 +96,9 @@ export function installDispatcher(game) {
             if (!choice || (action.type === 'chooseOption' && !choice.options?.[action.optionIndex])) return false;
         }
         if (action.type === 'submitInput' && action.note && !game.getTextInputTargets(action.note).some(target => target.key === action.target)) return false;
-        if (action.type === 'examineClue') {
-            const [room, clue] = (action.target || '').split(':');
-            return room === game.state.player.currentRoom && Boolean(game.getRoomClue(room, clue));
+        if (action.type === 'examineScenery') {
+            const [room, scenery] = (action.target || '').split(':');
+            return room === game.state.player.currentRoom && Boolean(game.getRoomScenery(room, scenery));
         }
         if (action.type === 'go') return game.canMovePlayer(action.target);
         if (Object.hasOwn(labels, action.type) || ['examine','chooseOption','submitInput','record','enterText'].includes(action.type)) {

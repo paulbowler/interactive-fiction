@@ -48,7 +48,7 @@ test('predicates require explicit synchronous boolean results', () => {
 
 test('executable model records and removed interpreter APIs are rejected', () => {
     const game = fresh();
-    for (const name of ['registerScript', 'evaluateCondition', 'performAction', 'performEffect', 'selectConditionalAction', 'runClueOnExamine'])
+    for (const name of ['registerScript', 'evaluateCondition', 'performAction', 'performEffect', 'selectConditionalAction', 'runSceneryOnExamine'])
         assert.equal(game[name], undefined, name);
     for (const alter of [
         state => {state.rooms.bank.items.bell.properties.choices = [{id: 'ring', action: {message: 'Ring'}}];},

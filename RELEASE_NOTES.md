@@ -1,14 +1,11 @@
-# Interactive Fiction v2.1.0
+# Interactive Fiction v3.0.0
 
-Controllers can use `game.getEntity`, `game.readProse` and context helpers
-`get`, `inRoom` and `inContainer` instead of repeating model traversal. Entity
-lookup is also available as the pure `findEntity` export. Description resolution
-uses the same lookup internally. Prose queries validate strings and string lists
-and do not mutate the model.
+Scenery uses the same terminology throughout the model, runtime, rules and browser.
 
-This is an additive release compatible with the 2.x action, world and save
-contracts. See the [API reference](docs/api.md#entity-and-prose-queries) and
-[designer tutorial](docs/tutorial.md).
+- Use `examineScenery`, `getRoomScenery`, and `showSceneryModal`.
+- Room features remain in `room.scenery` at runtime.
+- Inline links expose `sceneryKey`; scenery link targets use `type: 'scenery'` and `scenery`.
+- World schema version is 2; the save envelope remains version 1.
+- Update both engine and browser packages together. Previous scenery API names and world schema 1 saves are not supported.
 
-Both packages are MIT licensed. Install the versioned GitHub archives and retain
-the lockfile to reproduce a game build.
+Examination, discovery rules, room-local IDs and named prose retain their behaviour.

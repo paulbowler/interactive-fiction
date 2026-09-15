@@ -627,7 +627,7 @@ function buildConditionalText(description, separateSentences = false, query) {
         .reduce((text, part) => text + (separateSentences && /[.!?][”’"]?$/.test(text) && /^(?:\*\*|\[\[)?[A-Z]/.test(part) ? ' ' : '') + part, '');
 }
 
-function parseExamineLinks(text, scenery = gameModel.rooms[gameModel.player.currentRoom]?.clues || {}) {
+function parseExamineLinks(text, scenery = gameModel.rooms[gameModel.player.currentRoom]?.scenery || {}) {
     text = String(text ?? '');
     const parts = [];
     const linkPattern = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]|\*\*([^*]+)\*\*/g;
@@ -646,7 +646,7 @@ function parseExamineLinks(text, scenery = gameModel.rooms[gameModel.player.curr
         const entity = key?.startsWith('item:') ? findItemInGameModel(key.slice(5)) : scenery[key];
         parts.push(match[3] !== undefined
             ? { type: 'accent', text: match[3] }
-            : { type: 'examine', text: match[2] === undefined ? (entity?.name || entity?.title || key) : match[1], clueKey: key });
+            : { type: 'examine', text: match[2] === undefined ? (entity?.name || entity?.title || key) : match[1], sceneryKey: key });
 
         lastIndex = match.index + match[0].length;
     }
@@ -663,43 +663,43 @@ function parseExamineLinks(text, scenery = gameModel.rooms[gameModel.player.curr
 
 // Keep closing punctuation with an inline control, without underlining it.
 
-function getExamineLinkTarget(clueKey, clues) {
-    if (clueKey.startsWith('item:')) {
-        const itemKey = clueKey.slice(5);
+function getExamineLinkTarget(sceneryKey, scenery) {
+    if (sceneryKey.startsWith('item:')) {
+        const itemKey = sceneryKey.slice(5);
         const location = findItem(itemKey);
         if (location && location.accessible !== false && !isHiddenItem(location.item) && canActOnItem(itemKey, true)) {
             return { type: 'item', itemKey };
         }
         return null;
     }
-    if (clues[clueKey]) {
+    if (scenery[sceneryKey]) {
         return {
-            type: 'clue',
-            clue: clues[clueKey]
+            type: 'scenery',
+            scenery: scenery[sceneryKey]
         };
     }
 
     return null;
 }
 
-function showClueModal(clue, extraMessages = []) {
+function showSceneryModal(scenery, extraMessages = []) {
     const messageParts = [
-        descriptions.clue(clue),
+        descriptions.scenery(scenery),
         ...extraMessages
     ].filter(Boolean);
 
-    displayMessageModal(messageParts.join(' '), clue.title || clue.name || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
+    displayMessageModal(messageParts.join(' '), scenery.title || scenery.name || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.scenery || {});
 }
 
-function examineClue(clue) {
-    if (!clue || gameModel.player.gameOver) return;
-    if (clue) {
-        clue.examined = true;
+function examineScenery(scenery) {
+    if (!scenery || gameModel.player.gameOver) return;
+    if (scenery) {
+        scenery.examined = true;
     }
 
-    const description = descriptions.clue(clue);
+    const description = descriptions.scenery(scenery);
     const response = { description,
-        title: clue.title || clue.name || 'Examine', scenery: gameModel.rooms[gameModel.player.currentRoom]?.clues || {} };
+        title: scenery.title || scenery.name || 'Examine', scenery: gameModel.rooms[gameModel.player.currentRoom]?.scenery || {} };
     if (api._actionContext) api._actionContext.response = response;
     commitMutation(false);
     if (gameModel.player.gameOver) return;
@@ -2088,8 +2088,8 @@ function testPredicate(reference) {
     return result;
 }
 
-function getRoomClue(roomKey, clueKey) {
-    return gameModel.rooms?.[roomKey]?.clues?.[clueKey] || null;
+function getRoomScenery(roomKey, sceneryKey) {
+    return gameModel.rooms?.[roomKey]?.scenery?.[sceneryKey] || null;
 }
 
 function checkEndings() { api.events.emit('checkEndings'); }
@@ -2161,13 +2161,13 @@ const api = {
     world: cloneModel(world), messages: [],
     setHooks(value) { hooks = { ...hooks, ...value }; },
     registerPredicate(id, handler) { if (typeof id !== 'string' || !id.trim() || typeof handler !== 'function' || handler.constructor.name === 'AsyncFunction') throw new TypeError('Predicates require an ID and synchronous handler'); if (predicates.has(id)) throw new Error(`Duplicate predicate: ${id}`); predicates.set(id, handler); },
-    save() { const saved = cloneModel(gameModel); saved.runtime = { randomSeed: options.seed ?? 123456789, ...saved.runtime, saveFormatVersion: 1, worldSchemaVersion: 1 }; return saved; },
+    save() { const saved = cloneModel(gameModel); saved.runtime = { randomSeed: options.seed ?? 123456789, ...saved.runtime, saveFormatVersion: 1, worldSchemaVersion: 2 }; return saved; },
     load(saved) { const next = cloneModel(saved);
         if ((next.id || next.title) !== (world.id || world.title)) throw new Error('Save belongs to a different game');
         validateWorld(next, api.initialState || world); gameModel = next; normalizePlayerState(); return api; },
     context(action = {}) { return {
         action, actor: action.actor || 'player', target: findItemInGameModel(action.target) || gameModel.rooms[action.target] ||
-            (action.type === 'examineClue' && typeof action.target === 'string' ? getRoomClue(...action.target.split(':')) : undefined),
+            (action.type === 'examineScenery' && typeof action.target === 'string' ? getRoomScenery(...action.target.split(':')) : undefined),
         secondaryTarget: findItemInGameModel(action.secondaryTarget), room: gameModel.rooms[gameModel.player.currentRoom],
         world: api.world, state: gameModel, game: api,
         get: (id, path) => getItemPropertyValue(findItemInGameModel(id), path),
@@ -2226,8 +2226,8 @@ const api = {
     buildConditionalText,
     parseExamineLinks,
     getExamineLinkTarget,
-    showClueModal,
-    examineClue,
+    showSceneryModal,
+    examineScenery,
     getDiscoveryMessage(itemKey) {
         const item = findItemInGameModel(itemKey);
         return item ? `You uncover ${getItemReferenceText(itemKey, item)}.` : '';
@@ -2347,7 +2347,7 @@ const api = {
     movePlayerByEffect,
     performUpdateAction,
     testPredicate,
-    getRoomClue,
+    getRoomScenery,
     checkEndings,
     endGame,
     pushItem,
