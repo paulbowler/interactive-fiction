@@ -1,3 +1,4 @@
+import {childCollections} from './containment.js';
 // Query the canonical model without caching mutable object references.
 export function findEntity(model, id, includePrototypes = false) {
     if (typeof id !== 'string') return undefined;
@@ -11,7 +12,7 @@ export function findEntity(model, id, includePrototypes = false) {
     function visit(collection) {
         if (Object.hasOwn(collection || {}, id)) return collection[id];
         for (const item of Object.values(collection || {})) {
-            const found = visit(item.properties?.container?.items);
+            const found = childCollections(item).map(visit).find(Boolean);
             if (found) return found;
         }
     }

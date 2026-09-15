@@ -7,7 +7,7 @@ const names = [
   'imagePosition','startScreen','achievement','ending','encounter','clock','clockNotice',
   'wearable','insertion','connectable','connection','readable','searchable','pushable',
   'pullable','climbable','pressable','edible','tool','cuttable','toolOption','passage',
-  'record','choice','choiceOption','input','npc','missions','missionStates','routeEdge',
+  'record','choice','choiceOption','input','npc','talkResponse','giveResponse','missions','missionStates','routeEdge',
   'missionDestination','transport','transportSpace','transportStop','beforeMove',
   'imageVariant','cue','exitVariant','movementCue','turnCue','actorCueVariant','missionVariant',
   'predicateReference','transportRequest','timer','runtime','scheduledEvent',
@@ -108,7 +108,8 @@ lockMessage and unlockMessage customize doors only.
 
 The authoring schema does not validate complete saves. Engine save validation
 remains authoritative. Initial capabilities become object.properties, and
-containment becomes properties.container.items; room scenery stays room.scenery.
+containment becomes properties.container.items; NPC possessions remain under
+properties.npc.inventory. Room scenery stays room.scenery.
 
 | Runtime location | Fields | Meaning |
 | --- | --- | --- |

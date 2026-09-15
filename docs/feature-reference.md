@@ -265,7 +265,7 @@ Structured capabilities keep their configuration object; only container/door fie
 | `tool` | `{capabilities:['cut']}`. A directly carried tool can act on matching accessible targets. Capability names are story-selected strings. |
 | `cuttable` | `{capability:'cut', tool?:'specificToolID'}`. Restricts which tools match; named `options:[{id,label}]` supply the controls; `tool` availability and action rules select and handle them. |
 
-Use rules for unusual effects; these flags do not automatically reveal secrets or solve puzzles. There is no built-in generic Talk, Give, natural-language parser, capacity system, or general-purpose Use fallback. Register new actions when needed; [extending the engine](extending.md) explains the boundary.
+Use rules for unusual effects; these flags do not automatically reveal secrets or solve puzzles. Talk and Give have standard default refusals and controller extension points; see [NPC interactions](npc-interactions.md). There is no built-in natural-language parser, capacity system, or general-purpose Use fallback. Register new actions when needed; [extending the engine](extending.md) explains the boundary.
 
 ## Achievements and endings
 
@@ -399,6 +399,10 @@ Commit order: after-action rules at the commit boundary → elapsed minutes/cloc
 ## Actors, missions and transport
 
 Actors are ordinary objects with `npc:{...}`; they remain in room/item collections. There is no separate top-level actor collection consumed by the current engine.
+
+### Player interactions
+
+NPCs offer Talk and can receive Give attempts. Default responses are free refusals; controller instead rules supply dialogue or acceptance. `npc.talk` and `npc.give` hold optional `message`, `title` and `label` strings. `npc.inventory` holds private object definitions that travel with the actor. See [Talk, Give and NPC ownership](npc-interactions.md) for dispatch, transfer helpers and save behaviour.
 
 ### Actor cues
 

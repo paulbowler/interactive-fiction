@@ -24,6 +24,7 @@ export function validateTransports(model, connections = true) {
                     throw new Error(`Invalid world: invalid transport dwell on control ${id}`);
             }
             controls(item.properties?.container?.items ?? item.items);
+            controls(item.properties?.npc?.inventory ?? item.npc?.inventory);
         }
     }
     for (const room of Object.values(model.rooms || {})) controls(room.items);
@@ -40,6 +41,7 @@ export function validateTransports(model, connections = true) {
     function items(collection) {
         for (const [id,item] of Object.entries(collection || {})) {
             itemIds.add(id); items(item.properties?.container?.items ?? item.items);
+            items(item.properties?.npc?.inventory ?? item.npc?.inventory);
         }
     }
     for (const room of Object.values(model.rooms || {})) items(room.items);

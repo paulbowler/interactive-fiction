@@ -12,6 +12,7 @@ export function validateExitDoors(world, reference = world) {
             }
             if (!initial) present.add(id);
             collect(item?.properties?.container?.items || item?.items, initial);
+            collect(item?.properties?.npc?.inventory || item?.npc?.inventory, initial);
         }
     }
     for (const room of Object.values(world.rooms || {})) collect(room.items);
@@ -132,6 +133,17 @@ export function normaliseWorld(definition) {
             } else if (item.door) properties.door = capability;
             if (item.openable) capability.opened ??= false;
             if (item.lockable) capability.locked ??= false;
+            if (item.npc !== undefined) {
+                record(item.npc, `${where}.npc`);
+                if (item.npc.inventory !== undefined)
+                    properties.npc.inventory = items(item.npc.inventory, `${where}.npc.inventory`, ids);
+                for (const verb of ['talk', 'give']) if (item.npc[verb] !== undefined) {
+                    record(item.npc[verb], `${where}.npc.${verb}`);
+                    for (const key of ['message', 'title', 'label'])
+                        if (item.npc[verb][key] !== undefined && typeof item.npc[verb][key] !== 'string')
+                            fail(`${where}.npc.${verb}.${key}`, 'expected a string');
+                }
+            }
             result.properties = properties;
             collection[id] = result;
         }

@@ -1109,6 +1109,16 @@
         },
         "turnCue": {
           "$ref": "#/$defs/turnCue"
+        },
+        "talk": {
+          "$ref": "#/$defs/talkResponse"
+        },
+        "give": {
+          "$ref": "#/$defs/giveResponse"
+        },
+        "inventory": {
+          "$ref": "#/$defs/items",
+          "description": "NPC-owned object definitions. Optional; travels with its owner and is inaccessible to ordinary player actions. Nested items normalize recursively."
         }
       },
       "additionalProperties": true
@@ -2721,6 +2731,50 @@
       },
       "additionalProperties": false,
       "$comment": "Controller configuration or runtime state; not an authoring capability."
+    },
+    "talkResponse": {
+      "title": "talkResponse",
+      "type": "object",
+      "description": "Model-owned default talk refusal and menu text. Override the action in controller rules for meaningful interaction.",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Default refusal text; omitted uses the engine's neutral response."
+        },
+        "title": {
+          "type": "string",
+          "description": "Message heading.",
+          "default": "Talk"
+        },
+        "label": {
+          "type": "string",
+          "description": "Menu verb; Give appends the recipient name.",
+          "default": "Talk to"
+        }
+      },
+      "additionalProperties": false
+    },
+    "giveResponse": {
+      "title": "giveResponse",
+      "type": "object",
+      "description": "Model-owned default give refusal and menu text. Override the action in controller rules for meaningful interaction.",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Default refusal text; omitted uses the engine's neutral response."
+        },
+        "title": {
+          "type": "string",
+          "description": "Message heading.",
+          "default": "Give"
+        },
+        "label": {
+          "type": "string",
+          "description": "Menu verb; Give appends the recipient name.",
+          "default": "Give to"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }

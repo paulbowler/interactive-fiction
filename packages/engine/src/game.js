@@ -1,3 +1,5 @@
+import {childCollections} from './containment.js';
+import {installSocial} from './social.js';
 import {findEntity} from './entities.js';
 import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
@@ -78,7 +80,15 @@ function validateWorld(model, referenceModel = model) {
             if (container?.takeLabel !== undefined) require(typeof container.takeLabel === 'string' && container.takeLabel.trim().length > 0, `invalid removal label on ${id}`);
             if (container?.supporter) require(container.opened === true && !container.openable && !container.lockable && !container.locked, `supporter ${id} must be permanently open`);
             if (item.properties?.readable) require(typeof item.properties.readable.text === 'string' || Array.isArray(item.properties.readable.text), `readable ${id} needs text`);
-            visitItems(container?.items, ids);
+            if (item.properties?.npc !== undefined) {
+                require(object(item.properties.npc), `invalid NPC ${id}`);
+                for (const verb of ['talk', 'give']) {
+                    const config = item.properties.npc[verb];
+                    if (config !== undefined) require(object(config) &&
+                        ['message', 'title', 'label'].every(key => config[key] === undefined || typeof config[key] === 'string'), `invalid NPC ${verb} on ${id}`);
+                }
+            }
+            childCollections(item).forEach(collection => visitItems(collection, ids));
         });
     }
     Object.values(model.rooms).forEach((room) => {
@@ -1057,6 +1067,12 @@ function findItemInCollection(itemKey, items, owner) {
         if (containedMatch) {
             return containedMatch;
         }
+        const inventory = item.properties?.npc?.inventory;
+        const possession = findItemInCollection(itemKey, inventory, {
+            type: 'npc', key, item, path: owner.path.concat(key, 'properties', 'npc', 'inventory'),
+            items: inventory, accessible: false, playerOwned: false
+        });
+        if (possession) return possession;
     }
 
     return null;
@@ -1110,7 +1126,7 @@ function collectItemsInCollection(items, predicate, matches) {
             matches.push({ key: itemKey, item });
         }
 
-        collectItemsInCollection(item.properties?.container?.items, predicate, matches);
+        childCollections(item).forEach(collection => collectItemsInCollection(collection, predicate, matches));
     });
 }
 
@@ -1134,9 +1150,8 @@ function deleteItemInGameModel(itemKey) {
 }
 
 function containsCollection(item, targetItems) {
-    const children = item.properties?.container?.items;
-    return Boolean(children && (children === targetItems ||
-        Object.values(children).some((child) => containsCollection(child, targetItems))));
+    return childCollections(item).some(children => children === targetItems ||
+        Object.values(children).some(child => containsCollection(child, targetItems)));
 }
 
 function moveItem(itemKey, targetItems) {
@@ -1367,6 +1382,11 @@ function getStandardAvailableActions(itemKey) {
         const holder = findItemInGameModel(itemLocation.owner.key)?.properties?.container;
         actions.push({ id: 'take out', label: holder?.takeLabel || (holder?.supporter ? 'Take' : 'Take Out') });
     }
+
+    if (properties.npc && api.canTalkTo(itemKey))
+        actions.push({id: 'talk', label: properties.npc.talk?.label || 'Talk to'});
+    if (isCarried) for (const target of api.getGiveTargets(itemKey))
+        actions.push({id: `give:${target.key}`, label: `${target.item.properties.npc.give?.label || 'Give to'} ${target.item.name || target.key}`});
 
     if (properties.readable) actions.push({ id: 'read', label: 'Read' });
 
@@ -1938,7 +1958,7 @@ function collectTimersInItems(collections, timers) {
             if (item.properties?.timer) {
                 timers.push({ item });
             }
-            collectTimersInItems([item.properties?.container?.items], timers);
+            collectTimersInItems(childCollections(item), timers);
         });
     });
 }
@@ -1958,7 +1978,7 @@ function canPlaceItemTree(itemKey, item, replacedItem = null) {
         const existing = findItem(key);
         if (existing && existing.item !== replacedItem &&
             !(replacedItem && containsCollection(replacedItem, existing.parentItems))) return false;
-        return Object.entries(candidate.properties?.container?.items || {}).every(([id, child]) => visit(id, child));
+        return childCollections(candidate).every(collection => Object.entries(collection).every(([id, child]) => visit(id, child)));
     }
     return visit(itemKey, item);
 }
@@ -2009,6 +2029,12 @@ function getTargetItems(target = {}) {
             room.items = {};
         }
         return room.items;
+    }
+
+    if (target.type === 'npc') {
+        const npc = findItemInGameModel(target.item)?.properties?.npc;
+        if (!npc) return null;
+        return npc.inventory ||= {};
     }
 
     if (target.type === 'container') {
@@ -2375,6 +2401,7 @@ const worldEvents = createWorldEvents(api);
 const actions = createActions(api);
 api.schedule = createScheduler(api, worldEvents);
 installDispatcher(api);
+installSocial(api);
 normalizePlayerState();
 validateWorld(gameModel);
 return api;

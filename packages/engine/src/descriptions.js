@@ -31,6 +31,7 @@ export function validateWorldDescriptions(world) {
         for (const [id, item] of Object.entries(collection || {})) {
             entity(item, `${path}.${id}`);
             items(item?.properties?.container?.items || item?.items, `${path}.${id}.items`);
+            items(item?.properties?.npc?.inventory || item?.npc?.inventory, `${path}.${id}.npc.inventory`);
         }
     }
     for (const [id, room] of Object.entries(world.rooms || {})) {

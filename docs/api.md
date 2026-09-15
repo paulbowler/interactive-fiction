@@ -26,7 +26,7 @@ For the field-by-field feature families, supported controller configuration, and
 
 `dispatch({type, actor:'player', target, secondaryTarget, ...})` is synchronous. Targets are IDs. Only player actor dispatch is supported. It returns `{action, status, success, messages, value, choices}`. `success` means the action committed, including an explicitly committed replacement; a free query such as `look` returns its value without a successful mutation. Message entries contain `{type:'message', args:[text,title,...]}` for rendering by the view.
 
-Canonical types include `start`, `go`, `look`, `examine`, `examineScenery`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; display-oriented action aliases are also accepted.
+Canonical types include `talk`, `give`, `start`, `go`, `look`, `examine`, `examineScenery`, `take`, `drop`, `open`, `close`, `lock`, `unlock`, `read`, `eat`, `search`, `wear`, `remove`, `enter`, `push`, `pull`, `climb`, `climbDown`, `turnOn`, `turnOff`, `press`, `putIn`, `putOn`, `useOn`, `connect`, `disconnect`, `wait`, `choose`, `chooseOption`, `tool`, `input`, `submitInput`, `record`, `enterText`, `acknowledgeMessage` and `acknowledgeEnding`. `removeFrom` aliases `take`; display-oriented action aliases are also accepted.
 
 - `go.target`: destination room ID, connected from the current room.
 - `unlock.target`: container/door; `secondaryTarget`: held matching key.
@@ -328,3 +328,7 @@ helpers query current state on every call, including after a save is loaded.
 ## Authoring schema validation
 
 The Node-only browser build entry exports `validateWorldData(data)` for parsed authoring data. `loadWorld(path)` validates JSON5 before normalization. See the [schema guide](schema.md) and complete [attribute reference](model-attributes.md).
+
+## Social actions
+
+`talk.target` is an accessible NPC ID. `give.target` is the directly held item and `secondaryTarget` is the recipient NPC. Default refusals are free and unsuccessful. `canTalkTo`, `canGiveTo`, `getGiveTargets` and `transferToNpc` provide shared queries and accepted-item transfer. See [NPC interactions](npc-interactions.md) for the full contracts, model fields and `itemGiven` event. `ctx.move` also accepts `{type:"npc",item:npcID}`.

@@ -89,6 +89,8 @@ export function installDispatcher(game) {
         return game.handleItemAction(id, a.target);
     });
     function inScope(action) {
+        if (action.type === 'talk') return game.canTalkTo(action.target);
+        if (action.type === 'give') return game.canGiveTo(action.target, action.secondaryTarget);
         if (['useOn','tool'].includes(action.type) && !game.isDirectlyCarriedLocation(game.findItem(action.target))) return false;
         if (action.type === 'tool' && !action.secondaryTarget) return false;
         if (['choose','chooseOption'].includes(action.type)) {

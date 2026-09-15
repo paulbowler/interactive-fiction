@@ -64,6 +64,8 @@ requirement to populate bookkeeping in a new world.
 - [choiceOption](#choiceoption)
 - [input](#input)
 - [npc](#npc)
+- [talkResponse](#talkresponse)
+- [giveResponse](#giveresponse)
 - [missions](#missions)
 - [missionStates](#missionstates)
 - [routeEdge](#routeedge)
@@ -595,6 +597,29 @@ An actor is an ordinary object with npc configuration, not a separate top-level 
 | `missions` | [missions](#missions) | No | Not supplied | Actor mission routes and base visits. Put exceptional durations and conditional reports in controller rules. |
 | `movementCue` | [movementCue](#movementcue) | No | Not supplied | Actor movement report. Initial unconditional description may be authored; construct conditional variants in controller. |
 | `turnCue` | [turnCue](#turncue) | No | Not supplied | Actor turn reports. Construct conditional alternatives in controller. |
+| `talk` | [talkResponse](#talkresponse) | No | Not supplied | Model-owned default talk refusal and menu text. Override the action in controller rules for meaningful interaction. |
+| `give` | [giveResponse](#giveresponse) | No | Not supplied | Model-owned default give refusal and menu text. Override the action in controller rules for meaningful interaction. |
+| `inventory` | [items](#items) | No | Not supplied | NPC-owned object definitions. Optional; travels with its owner and is inaccessible to ordinary player actions. Nested items normalize recursively. |
+
+## talkResponse
+
+Model-owned default talk refusal and menu text. Override the action in controller rules for meaningful interaction.
+
+| Attribute | Type | Required? | Default when omitted | Meaning |
+| --- | --- | --- | --- | --- |
+| `message` | string | No | Not supplied | Default refusal text; omitted uses the engine's neutral response. |
+| `title` | string | No | "Talk" | Message heading. |
+| `label` | string | No | "Talk to" | Menu verb; Give appends the recipient name. |
+
+## giveResponse
+
+Model-owned default give refusal and menu text. Override the action in controller rules for meaningful interaction.
+
+| Attribute | Type | Required? | Default when omitted | Meaning |
+| --- | --- | --- | --- | --- |
+| `message` | string | No | Not supplied | Default refusal text; omitted uses the engine's neutral response. |
+| `title` | string | No | "Give" | Message heading. |
+| `label` | string | No | "Give to" | Menu verb; Give appends the recipient name. |
 
 ## missions
 
@@ -831,7 +856,8 @@ Runtime scheduled job; use schedule.afterTurns to create it.
 
 The authoring schema does not validate complete saves. Engine save validation
 remains authoritative. Initial capabilities become object.properties, and
-containment becomes properties.container.items; room scenery stays room.scenery.
+containment becomes properties.container.items; NPC possessions remain under
+properties.npc.inventory. Room scenery stays room.scenery.
 
 | Runtime location | Fields | Meaning |
 | --- | --- | --- |

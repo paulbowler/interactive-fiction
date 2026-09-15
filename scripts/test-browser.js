@@ -25,10 +25,17 @@ try {
     await fs.writeFile(storyFile,story.replace('export function register(game) {', `export function register(game) {
         game.available('image', {target:'study', when: ctx => ctx.action.option === 'duskIllustration'}, ctx => ctx.state.player.dusk === true);
         game.describe('study:mural', ctx => ctx.target.examined ? 'examined' : 'default');
+        game.instead('give', {target:'parcel', secondaryTarget:'courier'}, ctx => {
+            if (!game.transferToNpc('parcel','courier')) return 'STOP';
+            ctx.say(ctx.secondaryTarget.prose.accepted);
+            ctx.commit();
+            return 'HANDLED';
+        });
 `));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
         .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
+        .replace("items: {", "items: { courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
@@ -58,6 +65,10 @@ try {
         await page.locator('#item-actions').getByRole('button',{name:label,exact:true}).click();
         if(await page.locator('#messageModal').isVisible()) await page.locator('#messageModal .close').click();
     };
+    await action('#items','courier','Talk to');
+    await action('#items','parcel','Take');
+    await page.locator('#player-gear-toggle').click();
+    await action('#player-gear-items','Parcel','Give to Courier');
     await action('#items','brass key','Take');
     await page.locator('#player-gear-toggle').click();
     await action('#player-gear-items','Brass Key','Unlock Wooden Box');
@@ -74,12 +85,14 @@ try {
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
+    assert.ok((await state()).rooms.study.items.courier.properties.npc.inventory.parcel);
     assert.equal((await state()).rooms.study.scenery.mural.examined,true);
     await page.evaluate(()=>navigator.serviceWorker.ready);
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.carried.letter);
+    assert.ok((await state()).rooms.study.items.courier.properties.npc.inventory.parcel);
     await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});server=null;
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
