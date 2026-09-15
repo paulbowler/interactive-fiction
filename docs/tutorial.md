@@ -4,6 +4,8 @@ This tutorial uses **A Quiet Study**, a complete small example distributed with 
 
 You need Node.js 22 or later and a text editor. You do not need to modify the engine, install a database or run a server in production.
 
+New to callbacks? Read [How the engine runs your game](engine-lifecycle.md) for registration, availability checks, action processing and save/load.
+
 ## 1. Create a separate game project
 
 Download or clone the [platform repository](https://github.com/paulbowler/interactive-fiction). Copy the entire `examples/study` folder somewhere outside the platform repository and rename the copy to your game name.

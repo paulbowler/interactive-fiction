@@ -42,6 +42,8 @@ Call `getAvailableActions(id)` and `getItemChoiceOptions(id,index)` for presenta
 
 ## Rules and context
 
+For a step-by-step introduction to callbacks and action processing, see [the engine lifecycle guide](engine-lifecycle.md).
+
 `before`, `instead`, `after`, and `report` accept `(actionType, match, handler)` or `(actionType, handler)`. The type may be `*`. A match may be a target ID, a predicate, or `{target,secondaryTarget,when}`. Rules run in registration order and return unsubscribe functions.
 
 `CONTINUE` (also an omitted return) falls through; `STOP` stops processing; `HANDLED` replaces processing. Boolean returns are invalid. After rules run at a successful standard action's commit boundary, before turn consequences. Replaced actions do not run standard after rules. Report rules receive `ctx.result` and may adjust the result or report messages. Rules and handlers must be synchronous; they are trusted code, not transactional sandboxes, and exceptions do not roll back arbitrary mutations they made.

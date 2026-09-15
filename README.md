@@ -49,7 +49,7 @@ export const browserView = mountBrowser(world => {
 });
 ```
 
-Ordinary taking, dropping, containers, locks, inventory and movement need world properties, not bespoke scripts. See the [compact JSON5 world format](docs/world-model.md), [model and controller feature reference](docs/feature-reference.md), and [API guide](docs/api.md). To add capabilities, use the [extension guide](docs/extending.md).
+Ordinary taking, dropping, containers, locks, inventory and movement need world properties, not bespoke scripts. See the [compact JSON5 world format](docs/world-model.md), [model and controller feature reference](docs/feature-reference.md), and [API guide](docs/api.md). For callback registration and the complete action lifecycle, read [How the engine runs your game](docs/engine-lifecycle.md). To add capabilities, use the [extension guide](docs/extending.md).
 
 ## Install or upgrade a release
 
