@@ -106,6 +106,9 @@ test('NPC ownership rejects duplicates, cycles and malformed saves atomically',(
   const game=fresh(),before=game.save();
   for(const change of [
     s=>s.rooms.hall.items.courier.properties.npc.inventory=[],
+    s=>s.rooms.hall.items.courier.properties.npc.inventory=null,
+    s=>s.rooms.hall.items.courier.properties.npc.inventory=false,
+    s=>s.player.carried.bag.properties.container.items=false,
     s=>s.rooms.hall.items.courier.properties.npc.inventory={letter:{properties:{portable:true}}},
     s=>s.rooms.hall.items.courier.properties.npc.talk={message:42},
   ]){
