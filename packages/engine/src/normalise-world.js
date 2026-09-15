@@ -62,7 +62,7 @@ export function normaliseWorld(definition) {
 
     // Presentation stays on the entity. Capabilities and story state belong to
     // its runtime properties; the author does not need that wrapper.
-    const presentation = new Set(['id', 'name', 'article', 'description', 'detail', 'imageUrl', 'imageVariants']);
+    const presentation = new Set(['id', 'name', 'article', 'description', 'prose', 'detail', 'imageUrl', 'imageVariants']);
     const holding = new Set(['items', 'accepts', 'insertable', 'transparent', 'takeLabel']);
     const opening = new Set(['openable', 'opened', 'lockable', 'locked', 'key', 'openMessage', 'closeMessage', 'lockedMessage', 'unlockMessage', 'lockMessage']);
     const booleans = ['portable', 'fixed', 'container', 'supporter', 'door', 'openable', 'opened', 'lockable', 'locked', 'transparent', 'hidden', 'scenery', 'droppable'];

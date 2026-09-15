@@ -39,6 +39,7 @@ This reference covers the built-in feature families in platform 1.5. Read [World
 | Room `imageUrl`, `imagePosition` | Default illustration |
 | Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
+| Entity `prose` | Optional named text catalog on a room, object, actor, scenery feature or transport; selection belongs in the controller. Object prose stays on the entity at runtime, alongside `description`, and travels with it. |
 | Object `description`, `detail` | String or named-variant description and additional examination detail string |
 | Scenery `name`, `title`, `description` | Inline name, optional examination title (falls back to name), and string or named-variant description; room scenery is examinable but cannot be carried |
 
@@ -118,7 +119,7 @@ Deferred movement is saved in `player.pendingAction`. `acknowledgeMessage` compl
 
 ### Naming report alternatives
 
-Keep initial exit wording on the exit. Put alternative text in a named prose catalog; that catalog contains strings or lists of strings, with no selection conditions, variant records or timing settings:
+Keep initial exit wording on the exit. Put alternative text in a named `prose` catalog on its owning room or object; that catalog contains strings or lists of strings, with no selection conditions, variant records or timing settings:
 
 ```json5
 {
@@ -126,10 +127,8 @@ Keep initial exit wording on the exit. Put alternative text in a named prose cat
   rooms: {
     gallery: {
       exits: { hall: { before: 'the closed doors lead to the ' } },
+      prose: { openHallDoors: 'the open doors lead to the ' },
     },
-  },
-  prose: {
-    openHallDoors: 'the open doors lead to the ',
   },
 }
 ```
@@ -141,9 +140,11 @@ game.registerScript('doorsAreOpen', ctx => ctx.state.player.doorsOpen === true);
 game.state.rooms.gallery.exits.hall.variants = [{
   id: 'doorsOpen',
   condition: { predicate: 'doorsAreOpen' },
-  before: game.state.prose.openHallDoors,
+  before: game.state.rooms.gallery.prose.openHallDoors,
 }];
 ```
+
+Reserve top-level `prose` for genuinely shared game text. There is no implicit lookup, inheritance or fallback between catalogs: controllers read a specific entity’s catalog. Reacquire object references after loading, and find movable objects by ID instead of a starting-room path. Catalog entries do not automatically override built-in engine/browser messages.
 
 The engine does not infer a condition from an ID or resolve prose-key strings automatically: controller JavaScript reads the catalog explicitly. Exit, NPC cue and mission variants use their ordinary runtime selection semantics; they are not `game.describe` catalogs. Keep runtime ordering stable when saved report progress uses indexes. For individually addressable cue, observation and sound passages, give each string a key in model prose. The controller assembles runtime arrays from those names in the intended order. An array position is not a persistent authoring ID.
 
@@ -154,11 +155,15 @@ Apply the same separation to conditional action feedback: store named messages i
 A cue describes a currently true condition. An observation reports a condition becoming true during a turn's scheduler update. An ambient sound is selected from the relevant room's sound list, using saved random state. Keep those three behaviors separate in controller code, while their wording remains named data:
 
 ```json5
-prose: {
-  torchAbove: 'A torch beam crosses the landing.',
-  guardBoardsLift: 'The guard steps into the lift.',
-  echoingSteps: 'Radio: Footsteps echo across the marble.',
-  squeakingSole: 'Radio: A sole squeaks on the polished floor.',
+rooms: {
+  gallery: {
+    prose: {
+      torchAbove: 'A torch beam crosses the landing.',
+      guardBoardsLift: 'The guard steps into the lift.',
+      echoingSteps: 'Radio: Footsteps echo across the marble.',
+      squeakingSole: 'Radio: A sole squeaks on the polished floor.',
+    },
+  },
 },
 ```
 
@@ -166,11 +171,11 @@ After registering the predicates in JavaScript, configure the runtime:
 
 ```js
 const room = game.state.rooms.gallery;
-room.cues = [{condition: {predicate: 'guardAbove'}, text: game.state.prose.torchAbove}];
-room.observations = [{condition: {predicate: 'guardInLift'}, text: game.state.prose.guardBoardsLift}];
+room.cues = [{condition: {predicate: 'guardAbove'}, text: room.prose.torchAbove}];
+room.observations = [{condition: {predicate: 'guardInLift'}, text: room.prose.guardBoardsLift}];
 const guard = game.findItem('guard').item;
 guard.properties.npc.missions.sounds = {
-  gallery: [game.state.prose.echoingSteps, game.state.prose.squeakingSole],
+  gallery: [room.prose.echoingSteps, room.prose.squeakingSole],
 };
 ```
 
@@ -436,6 +441,7 @@ transports: {
     name: 'River Ferry',
     space: { room: 'ferryDeck' },
     stop: 'west',
+    prose: { departing: 'The ferry leaves the bank.', arrived: 'The ferry reaches the landing.' },
     stops: {
       west: { room: 'westBank' },
       east: { room: 'eastBank' },
@@ -493,7 +499,7 @@ Events publish facts after transitions:
 
 Transport updates precede item timers, actor missions and scheduled events. Event handlers may react or enqueue future requests; they should not manually advance transport updates.
 
-For automatic feedback, controllers can configure `transport.notices`: `departure`, `arrival` and `opening` arrays of `{room, condition?, text}`. Read every passage from named model prose. Only notices for the player's current room are reported. Stop-specific `effects` execute at departure; request `effects` execute at arrival only if their condition still holds. These are optional controller facilities, not required world-model fields.
+For automatic feedback, controllers can configure `transport.notices`: `departure`, `arrival` and `opening` arrays of `{room, condition?, text}`. Read every passage from the transport’s own `prose` catalog. Only notices for the player's current room are reported. Stop-specific `effects` execute at departure; request `effects` execute at arrival only if their condition still holds. These are optional controller facilities, not required world-model fields.
 
 A mission route edge `{to: 'eastBank', transport: 'ferry'}` uses physical waiting → ready → boarded → riding stages. Route endpoints remain room IDs; the engine maps them to stop IDs. Actors enter the same boarding room as the player. Player interference can delay a trip; it does not teleport the actor.
 

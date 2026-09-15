@@ -113,3 +113,8 @@ Images must be local, included in configured public directories. Output is a sep
 `game.getTransport(id)` returns live transport state. `game.requestTransport({transport, destination, actor?, dwell?, condition?, effects?})` queues a request and returns whether it was accepted. The destination is a stop ID. For array-authored stops this is the room ID, never an array index. Requesting does not itself consume a turn; use it inside a dispatched, committed interaction. Transport advancement uses the engine's normal turn scheduler. Reacquire state references after loading.
 
 The engine emits `transportDeparted` and `transportArrived` facts. Room-backed boarding spaces and automatic boarding connections are supported. See the [complete transport reference](feature-reference.md#transport) for defaults, events, NPC routes and validation.
+
+
+## Entity-local prose
+
+Named feedback can live on `room.prose`, `game.findItem(id).item.prose` or `game.getTransport(id).prose`. These are ordinary serializable dictionaries; the engine does not select a passage or infer behavior from its key. Controllers choose the message using state and read it from its owner. Object prose remains presentation data after normalization and follows the object through movement and save/load. Reacquire references after loading. A game-level catalog may still hold shared text.

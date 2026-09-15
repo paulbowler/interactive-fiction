@@ -19,7 +19,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v1.6.1 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v1.6.2 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 
@@ -246,4 +246,20 @@ This keeps the room's introductory passage and adds the dusk passage. Supply the
 
 ## Adding transport
 
-For a ferry, carriage or other transport with an interior room, declare a separate `transports` entity with `space: {room: 'interior'}` and a starting `stop`. Use `stops: ['harbour', 'island']` when stop IDs are room IDs; use a dictionary when those IDs differ. Both forms normalize to the same runtime structure. Keep occupants in the interior room, control behavior in JavaScript and report text in named model prose. See the [transport reference](feature-reference.md#transport) for defaults, requests, events, boarding restrictions and saved journeys. Room-backed spaces are supported; container and supporter boarding are not yet supported.
+For a ferry, carriage or other transport with an interior room, declare a separate `transports` entity with `space: {room: 'interior'}` and a starting `stop`. Use `stops: ['harbour', 'island']` when stop IDs are room IDs; use a dictionary when those IDs differ. Both forms normalize to the same runtime structure. Keep occupants in the interior room, control behavior in JavaScript and report text in the owning transport’s `prose` catalog. See the [transport reference](feature-reference.md#transport) for defaults, requests, events, boarding restrictions and saved journeys. Room-backed spaces are supported; container and supporter boarding are not yet supported.
+
+
+## Keeping prose with its owner
+
+Keep named feedback beside the entity it describes:
+
+```json5
+woodenBox: {
+  name: 'Wooden Box',
+  container: true,
+  openable: true,
+  prose: { discovery: 'A folded letter lies beneath the lining.' },
+},
+```
+
+A controller can read `game.findItem('woodenBox').item.prose.discovery`. The engine retains this catalog on the object when it moves and when a save is restored. Select messages using stable IDs and state, not translated strings. Use the same pattern for room observations, actor reports and transport notices. A game-level catalog is appropriate for shared text; it should not become a store for every entity’s prose. Keep `description` for ordinary examination text and its named alternatives; `prose` supplies other messages selected explicitly by controller code.

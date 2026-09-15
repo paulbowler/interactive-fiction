@@ -1,8 +1,8 @@
-# Interactive Fiction v1.6.1
+# Interactive Fiction v1.6.2
 
-Transport stops now accept the compact authoring form `stops: ['harbour', 'island']` when stop IDs match room IDs. The loader expands this to the existing dictionary. Dictionary syntax remains available for distinct stop IDs and additional declarative attributes. Empty arrays, duplicate IDs, invalid entry types and broken references fail clearly.
+Named prose belongs with its owning room, object, actor or transport. Object `prose` now remains presentation data alongside `description` after normalization, movement and save/load. Controllers read named passages from the owning entity; selection conditions remain in JavaScript. A game-level catalog remains available for genuinely shared text.
 
-This is an authoring-only simplification. Transport requests, journey timing, controller behavior, runtime schema and saves remain unchanged. Model, transport API and tutorial documentation cover both forms and the room-backed boarding scope.
+The model reference, tutorial and controller API document ownership and explicit lookups. Description selection, transport behavior, world schema and save format are unchanged.
 
 The two MIT-licensed packages are:
 
@@ -12,7 +12,7 @@ The two MIT-licensed packages are:
 Install the attached release archives as exact dependencies:
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.1/paulbowler-if-engine-1.6.1.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.1/paulbowler-if-browser-1.6.1.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.2/paulbowler-if-engine-1.6.2.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.2/paulbowler-if-browser-1.6.2.tgz
 ```
 
 Copy the [study template](https://github.com/paulbowler/interactive-fiction/tree/main/examples/study), including `.npmrc`, to start a game. Run `npm ci`, `npm test` and `npm run build`; deploy `dist/`. Builds contain their chosen engine version and all assets and do not depend on a runtime CDN.

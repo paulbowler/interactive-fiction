@@ -89,7 +89,7 @@ Put capabilities directly on an object; there is no authoring `properties` wrapp
 
 Supporters need neither `container: true` nor `opened: true`. They cannot be openable, lockable, locked or explicitly closed. A container may be open without supporting an Open action: an open bag can declare `container: true, opened: true`. A container without `opened` or `transparent` has inaccessible contents; declare `openable: true` when players should be able to open it. `transparent: true` follows the engine's accessible-content semantics, so do not use it to model a sealed glass barrier.
 
-An object cannot be both a door and a container, or start both open and locked. Containers can specify `accepts`, `insertable`, `transparent`, `takeLabel` and opening/locking prose directly. Structured capabilities such as `readable: { text: '...' }` and `passage: { destination: 'hall' }` retain their own configuration objects. Declare vehicles in the top-level `transports` collection, separately from control objects. Story flags can also be flat fields. Names, articles, descriptions, detail and image fields are presentation attributes.
+An object cannot be both a door and a container, or start both open and locked. Containers can specify `accepts`, `insertable`, `transparent`, `takeLabel` and opening/locking prose directly. Structured capabilities such as `readable: { text: '...' }` and `passage: { destination: 'hall' }` retain their own configuration objects. Declare vehicles in the top-level `transports` collection, separately from control objects. Story flags can also be flat fields. Names, articles, descriptions, `prose`, detail and image fields are presentation attributes. Object `prose` remains alongside `description` in normalized runtime data and saves; it is not a capability under `properties`.
 
 ## Descriptions
 
@@ -151,7 +151,7 @@ The JSON5 loader and normalizer reject broken starting-room, exit, passage and k
 
 `if-build` parses and normalizes the authoring file, then writes `dist/data/game.json`. The authoring `.json5` file is omitted from deployment. The browser uses the compiled JSON URL, so players need no JSON5 parser. A configured `.json` world is also accepted. Custom world filenames compile to the same path with a `.json` extension; set the view's `worldUrl` accordingly.
 
-Use an optional `prose` dictionary for named report strings or lists of strings. Controllers read that text to construct conditional exit, actor and action reports. Keep `variants` records, selection conditions and variant-specific timings in controller JavaScript; initial prose stays on its room or object. See [Naming report alternatives](feature-reference.md#naming-report-alternatives).
+Put an optional `prose` dictionary on the entity that owns its named report strings or lists of strings: room observations on the room, object feedback on the object, actor reports on the actor and transport notices on the transport. Keep only genuinely shared text in a game-level catalog. Controllers read that text to construct conditional exit, actor and action reports. Keep `variants` records, selection conditions and variant-specific timings in controller JavaScript; initial prose stays on its room or object. See [Naming report alternatives](feature-reference.md#naming-report-alternatives).
 
 
 ## Transport entities

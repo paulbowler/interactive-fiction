@@ -188,3 +188,16 @@ test('JSON5 loader expands compact transport stops into the canonical dictionary
         assert.deepEqual(normaliseWorld(model),model);
     } finally {await fs.rm(dir,{recursive:true,force:true});}
 });
+
+
+test('entity prose remains presentation data when objects move and saves are restored',()=>{
+    const input=withItems({box:{name:'Box',portable:true,container:true,prose:{opened:'The lid lifts.',refusals:['It stays shut.','The lid resists.']}}});
+    const game=createGame(input), entity=game.findItem('box').item;
+    assert.deepEqual(entity.prose,input.rooms.study.items.box.prose);
+    assert.equal(entity.properties.prose,undefined);
+    assert.ok(game.dispatch({type:'take',target:'box'}).success);
+    const restored=createGame(input).load(game.save());
+    assert.deepEqual(restored.state.player.carried.box.prose,entity.prose);
+    restored.state.player.carried.box.prose.opened='The lid swings upwards.';
+    assert.equal(input.rooms.study.items.box.prose.opened,'The lid lifts.');
+});

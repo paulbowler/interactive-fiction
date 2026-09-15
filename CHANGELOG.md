@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.2
+
+- Preserve object-local `prose` as presentation data alongside descriptions through normalization, movement and save/load.
+- Document entity-owned prose for rooms, objects, actors and transports; reserve game-level catalogs for shared text.
+- Update authoring and controller examples to read prose from its owner.
+
 ## 1.6.1
 
 - Author transport stops as an array of room IDs when stop and room IDs match.
