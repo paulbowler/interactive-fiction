@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0
+
+- Share entity lookup between description resolution and controller queries.
+- Add validated, read-only entity prose access and current-state context helpers.
+- Test containment, prototype lookup, prose validation and restored-state queries.
+
 ## 2.0.0
 
 - All player intentions use common dispatch, explicit rule outcomes and successful-action commits.

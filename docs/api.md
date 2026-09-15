@@ -3,7 +3,7 @@
 ## Imports
 
 ```js
-import { createGame, normaliseWorld, CONTINUE, STOP, HANDLED,
+import { createGame, normaliseWorld, findEntity, CONTINUE, STOP, HANDLED,
   ENGINE_VERSION, WORLD_SCHEMA_VERSION, SAVE_FORMAT_VERSION } from '@paulbowler/if-engine';
 import { mountBrowser, BROWSER_VERSION } from '@paulbowler/if-browser';
 ```
@@ -303,3 +303,22 @@ and saved random state. Saved reports contain their source and kind; display
 queries recheck availability against current facts. Changing a receiver or
 listener state therefore also affects reports restored from saves, without
 consuming a turn or another random choice.
+
+## Entity and prose queries
+
+`findEntity(model, id, includePrototypes = false)` is a pure exported lookup for a
+canonical model. `game.getEntity(id, {includePrototypes = false})` queries current
+state. Both resolve rooms, transports, room-scoped scenery (`room:scenery`) and
+nested objects; live objects take priority over optional prototypes. Unknown IDs
+return `undefined`. Returned entities are current state references, so reacquire
+them after loading.
+
+`game.readProse(ownerID, passageID)` reads an entity-owned string or list of
+strings, including prototype prose. It returns a copy and throws a descriptive
+error for missing owners or malformed passages. It never fills in missing prose
+or alters state. Use it when composing named reports in a controller.
+
+Contexts provide `ctx.get(itemID, propertyPath)`, `ctx.inRoom(itemID, roomID)` and
+`ctx.inContainer(itemID, containerID)`. Property paths are relative to `properties`.
+Location tests check the direct owner, not ancestor rooms or accessibility. These
+helpers query current state on every call, including after a save is loaded.

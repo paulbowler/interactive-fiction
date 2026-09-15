@@ -1,3 +1,4 @@
+import {findEntity as find} from './entities.js';
 // Prose is data; a synchronous story resolver selects a named variant.
 function isVariantArray(value) {
     return Array.isArray(value) && value.some(part => part && Object.hasOwn(part, 'id'));
@@ -45,24 +46,6 @@ export function validateWorldDescriptions(world) {
 
 export function createDescriptions(game) {
     const resolvers = new Map(), resolving = new Set();
-    function find(model, id, includePrototypes = false) {
-        const colon = id.indexOf(':');
-        if (colon !== -1) {
-            const clue = model.rooms?.[id.slice(0, colon)]?.clues?.[id.slice(colon + 1)];
-            if (clue) return clue;
-        }
-        if (Object.hasOwn(model.rooms || {}, id)) return model.rooms[id];
-        function visit(collection) {
-            if (Object.hasOwn(collection || {}, id)) return collection[id];
-            for (const item of Object.values(collection || {})) {
-                const found = visit(item.properties?.container?.items);
-                if (found) return found;
-            }
-        }
-        return visit(model.player?.carried) || visit(model.player?.worn) ||
-            Object.values(model.rooms || {}).map(room => visit(room.items)).find(Boolean) ||
-            (includePrototypes ? visit(model.items) : undefined);
-    }
     function resolve(id, entity, separateSentences = true) {
         const description = entity?.description;
         validateDescription(description, id || 'clue');

@@ -1,3 +1,4 @@
+import {findEntity} from './entities.js';
 import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
 import { normaliseWorld, validateExitDoors } from './normalise-world.js';
@@ -2143,6 +2144,15 @@ function startTimer(...args) { return worldEvents.startTimer(...args); }
 function advanceTimers(...args) { return worldEvents.advanceTimers(...args); }
 
 const api = {
+    getEntity(id, {includePrototypes = false} = {}) { return findEntity(gameModel, id, includePrototypes); },
+    readProse(owner, id) {
+        const entity = findEntity(gameModel, owner, true);
+        if (!entity) throw new Error(`Missing prose owner: ${owner}`);
+        const value = entity.prose?.[id];
+        if (typeof value !== 'string' && !(Array.isArray(value) && value.every(text => typeof text === 'string')))
+            throw new Error(`Missing or invalid report prose: ${owner}.${id}`);
+        return cloneModel(value);
+    },
     canMovePlayer,
     canPushOrPull,
     output, displayMessageModal, showItemChoiceOptions,
@@ -2160,6 +2170,9 @@ const api = {
             (action.type === 'examineClue' && typeof action.target === 'string' ? getRoomClue(...action.target.split(':')) : undefined),
         secondaryTarget: findItemInGameModel(action.secondaryTarget), room: gameModel.rooms[gameModel.player.currentRoom],
         world: api.world, state: gameModel, game: api,
+        get: (id, path) => getItemPropertyValue(findItemInGameModel(id), path),
+        inRoom: (id, room) => { const owner = findItem(id)?.owner; return Boolean(owner?.type === 'room' && owner.key === room); },
+        inContainer: (id, container) => { const owner = findItem(id)?.owner; return Boolean(owner?.type === 'container' && owner.key === container); },
         say: displayMessageModal,
         commit: (advanceTime = true) => commitMutation(advanceTime),
         set: (item, attribute, value) => performUpdateAction({ item, attribute, newValue: cloneModel(value) }),

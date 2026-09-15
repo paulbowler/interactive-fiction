@@ -1,6 +1,6 @@
 # @paulbowler/if-browser
 
-Version 2.0.0. The browser view and standalone-site builder for `@paulbowler/if-engine` v2. MIT licensed.
+Version 2.1.0. The browser view and standalone-site builder for `@paulbowler/if-engine` v2. MIT licensed.
 
 ```js
 import { createGame } from '@paulbowler/if-engine';
