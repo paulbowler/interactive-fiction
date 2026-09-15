@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 const schema = JSON.parse(fs.readFileSync(new URL('../packages/engine/world.schema.json', import.meta.url)));
 const names = [
   'world','items','idList','player','room','exit','scenery','object','description','text','paragraphs','prose',
-  'imagePosition','startScreen','achievement','ending','encounter','clock','clockNotice',
+  'imagePosition','startScreen','achievement','ending','encounter','clock','clockNotice','clockDeadline',
   'wearable','insertion','connectable','connection','readable','searchable','pushable',
   'pullable','climbable','pressable','edible','tool','cuttable','toolOption','passage',
   'record','choice','choiceOption','input','npc','talkResponse','giveResponse','missions','missionStates','routeEdge',

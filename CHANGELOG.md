@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.1
+
+- Add optional `clock.startTime` for a 24-hour game clock and `clock.deadline` for a named failure ending at the next occurrence of a time of day.
+- Handle midnight rollover, elapsed-time thresholds, deadline precedence, and save/load without changing existing games.
+- Update browser clock, saved-slot and ending displays, authoring validation, documentation, and regression coverage.
+
 ## 3.2.0
 
 Add standard Talk/Give refusals, model-owned social responses, private NPC inventories, accepted-gift transfer and the itemGiven event. Extend schema, documentation and browser/headless regression coverage.

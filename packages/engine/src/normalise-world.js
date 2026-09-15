@@ -31,6 +31,28 @@ export function validateExitDoors(world, reference = world) {
     }
 }
 
+const validTime = value => typeof value === 'string' && value.length === 5 && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+export const timeOfDayMinutes = value => {
+    const [hours, minutes] = value.split(':').map(Number);
+    return hours * 60 + minutes;
+};
+
+export function validateClock(world) {
+    const clock = world.clock;
+    const fail = (path, message) => { throw new Error(`Invalid world at clock.${path}: ${message}`); };
+    if (clock?.startTime !== undefined && !validTime(clock.startTime))
+        fail('startTime', 'expected a 24-hour time in HH:MM format');
+    if (clock?.deadline === undefined) return;
+    const deadline = clock.deadline;
+    if (!deadline || typeof deadline !== 'object' || Array.isArray(deadline)) fail('deadline', 'expected an object');
+    if (clock.startTime === undefined) fail('deadline', 'requires clock.startTime');
+    if (!validTime(deadline.time)) fail('deadline.time', 'expected a 24-hour time in HH:MM format');
+    if (typeof deadline.ending !== 'string' || !deadline.ending.trim() ||
+        !Array.isArray(world.endings) || world.endings.filter(ending => ending?.id === deadline.ending).length !== 1)
+        fail('deadline.ending', 'expected a unique existing ending ID');
+    if (Object.keys(deadline).some(key => !['time', 'ending'].includes(key))) fail('deadline', 'unknown attribute');
+}
+
 // Authoring is concise; runtime containment has one owner collection per object.
 // An already canonical world/save is cloned without changing its state.
 export function normaliseWorld(definition) {
@@ -55,6 +77,7 @@ export function normaliseWorld(definition) {
         }
     }
     validateWorldDescriptions(world);
+    validateClock(world);
     if (world.schemaVersion !== undefined && world.schemaVersion !== 2) fail('schemaVersion', 'Unsupported world schema version');
     if (world.player?.currentRoom !== undefined && world.player.room === undefined) { validateTransports(world); validateExitDoors(world); return world; }
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');

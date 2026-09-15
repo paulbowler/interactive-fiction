@@ -44,6 +44,7 @@ requirement to populate bookkeeping in a new world.
 - [encounter](#encounter)
 - [clock](#clock)
 - [clockNotice](#clocknotice)
+- [clockDeadline](#clockdeadline)
 - [wearable](#wearable)
 - [insertion](#insertion)
 - [connectable](#connectable)
@@ -341,7 +342,7 @@ Definition keyed by achievement ID. Controller explicitly awards it.
 
 ## ending
 
-Ending definition. Controller chooses when to end play.
+Ending definition. Selected by a controller or clock.deadline.
 
 | Attribute | Type | Required? | Default when omitted | Meaning |
 | --- | --- | --- | --- | --- |
@@ -368,8 +369,10 @@ Optional clock controls; timed actions still cost minutes without this object.
 
 | Attribute | Type | Required? | Default when omitted | Meaning |
 | --- | --- | --- | --- | --- |
+| `startTime` | string | No | Not supplied | Starting time of day in 24-hour HH:MM format (for example 09:30). The displayed clock adds elapsed minutes and wraps at midnight. Omit to display elapsed duration; timers and notice thresholds always use elapsed minutes. |
 | `minutesPerTurn` | integer | No | 1 | Minutes per timed commit. |
 | `notices` | array of [clockNotice](#clocknotice) | No | Not supplied | Threshold notices; omitted means none. |
+| `deadline` | [clockDeadline](#clockdeadline) | No | Not supplied | Optional failure at the next occurrence of a time of day after clock.startTime; requires clock.startTime. Equal start and deadline times allow 24 hours. |
 
 ## clockNotice
 
@@ -379,6 +382,15 @@ Message when elapsed minutes cross a threshold.
 | --- | --- | --- | --- | --- |
 | `minute` | integer | Yes | Not supplied | Positive minute threshold. |
 | `text` | [text](#text) | Yes | Not supplied | Unconditional string, or ordered strings/named segments. Controller selects named segments; no code is evaluated. |
+
+## clockDeadline
+
+Optional failure at the next occurrence of a time of day after clock.startTime; requires clock.startTime. Equal start and deadline times allow 24 hours.
+
+| Attribute | Type | Required? | Default when omitted | Meaning |
+| --- | --- | --- | --- | --- |
+| `time` | string | Yes | Not supplied | Deadline time in 24-hour HH:MM format. |
+| `ending` | string | Yes | Not supplied | ID of an existing ending to trigger when the deadline is reached or passed. |
 
 ## wearable
 

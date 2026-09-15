@@ -386,7 +386,30 @@ language. Immediate decisions belong in action and availability rules.
 
 ## Clock and delayed events
 
+Set `clock.startTime` to a 24-hour `"HH:MM"` string to start the game clock at a particular time:
+
+```json
+"clock": { "startTime": "09:30", "minutesPerTurn": 1 }
+```
+
+The browser displays 09:30 initially, then 09:31 after one timed action, and wraps at midnight. Saves preserve the starting time and elapsed progress. Without `startTime`, the display remains elapsed duration. `player.elapsedMinutes`, notice thresholds, and timers continue to measure elapsed play time independently of the starting time.
+
 `clock.minutesPerTurn` is a positive integer, default 1 when a clock is declared. `clock.notices` is an array of `{minute, text}`: notices fire when a successful timed action crosses a threshold, even if its step skips over the exact minute. Declare a clock to show the browser time/wait controls. Timed commits still count minutes at the default rate without those controls.
+
+An optional deadline selects a failure ending automatically:
+
+```json
+"clock": {
+  "startTime": "00:00",
+  "minutesPerTurn": 1,
+  "deadline": { "time": "05:00", "ending": "out-of-time" }
+},
+"endings": [
+  { "id": "out-of-time", "title": "Too late", "text": ["Dawn breaks. Your chance has gone."] }
+]
+```
+
+A deadline requires `startTime` and an existing, unique ending ID. It means the next occurrence of the given time after the start: 23:00 to 05:00 allows six hours; identical start and deadline times allow 24 hours. The engine ends play when elapsed minutes reach or pass that limit, before `stateCheck`, controller ending checks, and scheduled world updates. Actions can overshoot the minute; the clock retains the full elapsed action cost. Free or failed actions do not consume time. An ending already triggered by an action remains final. Deadline configuration and elapsed progress survive saves; starting an already overdue world triggers the failure immediately. Omit `deadline` for unrestricted play.
 
 Successful mutations, including Read and recording a note, usually cost one turn. Look and examination are normally free; an examination can still save discovery changes. Failed actions do not advance time unless its action rule explicitly charges them. Ending play stops further world advancement.
 
@@ -394,7 +417,7 @@ Use `schedule.afterTurns(count,event,data)` for new delayed reactions; save its 
 
 An item-scoped timer is available through `startTimer({item, turns, event?, data?, waitUntil?, justStarted?})`. It replaces the item's timer, has a one-update `justStarted` grace, decrements on later timed updates, and removes itself before publishing its named event. Set `justStarted:false` for a chained timer that should count the next update immediately. At zero it can wait for `waitUntil` to become true. Cancel it by deleting the item's runtime `properties.timer`.
 
-Commit order: after-action rules at the commit boundary → elapsed minutes/clock notices → `stateCheck` → `checkEndings` → transports → item timers → actor missions → scheduled events → room observations/actor cues → `checkEndings` → view/save. A free commit skips timed updates. Ordering is part of gameplay; do not manually call scheduler advancement in ordinary story rules.
+Commit order: after-action rules at the commit boundary → elapsed minutes/clock notices → deadline check → `stateCheck` → `checkEndings` → transports → item timers → actor missions → scheduled events → room observations/actor cues → `checkEndings` → view/save. A free commit skips timed updates. Ordering is part of gameplay; do not manually call scheduler advancement in ordinary story rules.
 
 ## Actors, missions and transport
 

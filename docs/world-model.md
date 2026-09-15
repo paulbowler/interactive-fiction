@@ -66,6 +66,8 @@ Provide `title`, `player.room`, and `rooms`. A stable `id` is strongly recommend
 | Player `carried`, `worn` | Empty collections |
 | Player `elapsedMinutes` | `0` |
 | `clock` | No optional clock controls |
+| `clock.deadline` | Omitted; no time limit. Set `{time: "05:00", ending: "out-of-time"}` with `startTime` to enable. |
+| `clock.startTime` | Omitted; display elapsed duration. Set `"HH:MM"` for time of day. |
 | `clock.minutesPerTurn`, when `clock` is present | `1` |
 | `openable` object's `opened` | `false` |
 | `lockable` object's `locked` | `false` |

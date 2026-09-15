@@ -90,7 +90,7 @@ Browser automatic save selection also checks the story's string `version`. Keep 
 
 ## Browser and build
 
-`mountBrowser(factory,{worldUrl='./data/game.json',serviceWorkerUrl='./service-worker.js',autoStart=true,clockLabel='Elapsed time'})` returns a view. The factory receives fetched world data and must return a configured game. Room image refresh and preloading use the factory’s configured state, including controller-registered image queries. Default startup waits for window load, or schedules startup if load already completed; it does not replace `window.onload`. Use `autoStart:false` and `await view.start()` for explicit lifecycle control. `view.ready` exposes the startup promise once begun. Startup failures show a visible error; the promise completes after handling that error. One view mounts per document.
+`mountBrowser(factory,{worldUrl='./data/game.json',serviceWorkerUrl='./service-worker.js',autoStart=true,clockLabel})` returns a view. `clockLabel` defaults to `Time` when `clock.startTime` is set, otherwise `Elapsed time`. The factory receives fetched world data and must return a configured game. Room image refresh and preloading use the factory’s configured state, including controller-registered image queries. Default startup waits for window load, or schedules startup if load already completed; it does not replace `window.onload`. Use `autoStart:false` and `await view.start()` for explicit lifecycle control. `view.ready` exposes the startup promise once begun. Startup failures show a visible error; the promise completes after handling that error. One view mounts per document.
 
 `view.game`, `initialModel`, `updateView`, `saveGameModel`, popup methods and image collection helpers support hosts and tests. Browser focus and animation state is presentation-only. Essential deferred movement resides in the game save and completes via `acknowledgeMessage`.
 
@@ -332,3 +332,7 @@ The Node-only browser build entry exports `validateWorldData(data)` for parsed a
 ## Social actions
 
 `talk.target` is an accessible NPC ID. `give.target` is the directly held item and `secondaryTarget` is the recipient NPC. Default refusals are free and unsuccessful. `canTalkTo`, `canGiveTo`, `getGiveTargets` and `transferToNpc` provide shared queries and accepted-item transfer. See [NPC interactions](npc-interactions.md) for the full contracts, model fields and `itemGiven` event. `ctx.move` also accepts `{type:"npc",item:npcID}`.
+
+## Clock
+
+`game.formatClockTime(minutes = game.state.player.elapsedMinutes, clock = game.state.clock)` formats the configured starting time plus elapsed minutes as a 24-hour clock, wrapping at midnight. Without `clock.startTime`, it formats elapsed duration. `game.formatElapsedTime(minutes)` always formats elapsed duration.

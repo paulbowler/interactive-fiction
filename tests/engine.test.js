@@ -473,3 +473,35 @@ test('named exit text queries select variants without mutating state or dependin
     game.load(game.save());
     assert.equal(game.getExitDisplayDefinition(game.state.rooms.study.exits.hall, 'Hall').before, 'the open ');
 });
+
+
+test('starting time advances across midnight without shifting elapsed notices and survives saves', () => {
+    const definition = {title: 'Night watch', clock: {startTime: '23:58', minutesPerTurn: 5,
+        notices: [{minute: 5, text: 'Five minutes have passed.'}]},
+        player: {room: 'hall'}, rooms: {hall: {name: 'Hall'}}};
+    const game = createGame(definition);
+    assert.equal(game.formatClockTime(), '23:58');
+    assert.equal(game.state.player.elapsedMinutes, 0);
+    game.dispatch({type: 'start'});
+    game.dispatch({type: 'wait'});
+    assert.equal(game.formatClockTime(), '00:03');
+    assert.equal(game.state.player.elapsedMinutes, 5);
+    assert.ok(game.state.player.turnObservations.some(cue => cue.text === 'Five minutes have passed.'));
+    const saved = JSON.parse(JSON.stringify(game.save()));
+    game.dispatch({type: 'wait'});
+    assert.equal(game.formatClockTime(), '00:08');
+    game.load(saved);
+    assert.equal(game.formatClockTime(), '00:03');
+    assert.equal(createGame(saved).formatClockTime(), '00:03');
+    assert.equal(createGame(definition).formatClockTime(), '23:58');
+    assert.equal(game.formatClockTime(2885), '00:03');
+    assert.equal(game.formatClockTime(5, {startTime: '09:30'}), '09:35');
+    assert.equal(game.formatClockTime(1500, {}), '25:00');
+    assert.equal(game.formatElapsedTime(1500), '25:00');
+    assert.equal(definition.player.elapsedMinutes, undefined);
+});
+
+test('omitting starting time preserves elapsed display', () => {
+    const game = createGame({title: 'Clock', clock: {}, player: {room: 'hall', elapsedMinutes: 1500}, rooms: {hall: {}}});
+    assert.equal(game.formatClockTime(), '25:00');
+});

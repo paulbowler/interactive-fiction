@@ -3,7 +3,7 @@ import {installSocial} from './social.js';
 import {findEntity} from './entities.js';
 import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
-import { normaliseWorld, validateExitDoors } from './normalise-world.js';
+import { normaliseWorld, validateExitDoors, validateClock, timeOfDayMinutes } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
 import { createActions } from './actions.js';
 import { installDispatcher } from './dispatcher.js';
@@ -41,6 +41,7 @@ function cloneModel(model) {
 
 function validateWorld(model, referenceModel = model) {
     validateExitDoors(model, referenceModel);
+    validateClock(model);
     validateWorldDescriptions(model);
     validateTransports(model);
     const object = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -242,8 +243,10 @@ function commitMutation(advanceTime = true) {
             .filter(notice => previousMinutes < notice.minute && gameModel.player.elapsedMinutes >= notice.minute)
             .map(notice => ({ room: gameModel.player.currentRoom, text: buildConditionalText(notice.text) }));
     }
-    api.events.emit('stateCheck');
-    checkEndings();
+    if (!checkDeadline()) {
+        api.events.emit('stateCheck');
+        checkEndings();
+    }
     if (gameModel.player.gameOver) {
         updateView();
         saveGameModel();
@@ -274,6 +277,11 @@ function waitTurn() {
 
 function formatElapsedTime(minutes) {
     return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+}
+
+function formatClockTime(minutes = gameModel.player.elapsedMinutes || 0, clock = gameModel.clock) {
+    if (clock?.startTime === undefined) return formatElapsedTime(minutes);
+    return formatElapsedTime((timeOfDayMinutes(clock.startTime) + minutes % 1440) % 1440);
 }
 
 function recordRoomVisit(room) {
@@ -2118,7 +2126,19 @@ function getRoomScenery(roomKey, sceneryKey) {
     return gameModel.rooms?.[roomKey]?.scenery?.[sceneryKey] || null;
 }
 
-function checkEndings() { api.events.emit('checkEndings'); }
+function checkDeadline() {
+    if (gameModel.player.gameOver) return true;
+    const deadline = gameModel.clock?.deadline;
+    if (!deadline || !gameModel.player.started) return false;
+    const duration = (timeOfDayMinutes(deadline.time) - timeOfDayMinutes(gameModel.clock.startTime) + 1440) % 1440 || 1440;
+    if (gameModel.player.elapsedMinutes < duration) return false;
+    endGame(gameModel.endings.find(ending => ending.id === deadline.ending));
+    return true;
+}
+
+function checkEndings() {
+    if (!checkDeadline()) api.events.emit('checkEndings');
+}
 
 function getEndingText(ending = getCurrentEnding()) {
     const text = ending?.text || '';
@@ -2223,6 +2243,7 @@ const api = {
     commitMutation,
     waitTurn,
     formatElapsedTime,
+    formatClockTime,
     recordRoomVisit,
     normalizePlayerState,
     normalizePlayerCollections,

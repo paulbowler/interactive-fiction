@@ -34,6 +34,7 @@ try {
 `));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
+        .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
         .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
         .replace("items: {", "items: { courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
@@ -56,6 +57,8 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/demo/`);
     await page.locator('#start-game-button').click();
     assert.equal(await page.locator('#room-name').textContent(),'Study');
+    assert.equal(await page.locator('#game-clock').textContent(), '23:58');
+    assert.equal(await page.locator('#game-clock').getAttribute('aria-label'), 'Time: 23:58');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'center center');
     await page.locator('#room-description').getByRole('button',{name:'mural',exact:true}).click();
     assert.ok((await page.locator('#messageModal').textContent()).includes('A painted ship.'));
@@ -80,6 +83,9 @@ try {
         const {browserView}=await import(document.querySelector('script[type="module"]').src);
         return browserView.game.save();
     });
+    const elapsedMinutes = (await state()).player.elapsedMinutes;
+    const clockText = `${String(Math.floor(((1438 + elapsedMinutes) % 1440) / 60)).padStart(2, '0')}:${String((1438 + elapsedMinutes) % 60).padStart(2, '0')}`;
+    assert.equal(await page.locator('#game-clock').textContent(), clockText);
     assert.ok((await state()).player.dusk);
     assert.equal((await state()).rooms.study.imageVariants[0].id,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
@@ -91,17 +97,36 @@ try {
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
+    assert.equal(await page.locator('#game-clock').textContent(), clockText);
     assert.ok((await state()).player.carried.letter);
     assert.ok((await state()).rooms.study.items.courier.properties.npc.inventory.parcel);
     await new Promise(resolve=>{server.close(resolve);server.closeAllConnections();});server=null;
     await page.reload();
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
+    assert.equal(await page.locator('#game-clock').textContent(), clockText);
     assert.ok((await state()).player.dusk);
     assert.equal((await state()).rooms.study.scenery.mural.examined,true);
     assert.equal((await state()).rooms.study.imageVariants[0].id,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok(await page.locator('#room-image').evaluate(img=>img.complete&&img.naturalWidth>0));
+    await page.locator('#game-menu-button').click();
+    await page.locator('[data-save-slots]').click();
+    await page.getByRole('button', {name: 'Save slot 1', exact: true}).click();
+    assert.ok((await page.locator('[data-slot="1"] p').textContent()).includes(clockText));
+    await page.locator('#saveSlotsModal .close').click();
+    await page.evaluate(async () => {
+        const {browserView} = await import(document.querySelector('script[type="module"]').src);
+        for (let turn = 0; turn < 32 && !browserView.game.state.player.gameOver; turn++)
+            browserView.game.dispatch({type: 'wait'});
+    });
+    assert.equal(await page.locator('#end-screen').isVisible(), true);
+    assert.equal(await page.locator('#end-screen-title').textContent(), 'Too late');
+    assert.equal(await page.locator('#end-screen-time').textContent(), 'Time: 00:30');
+    assert.equal(await page.locator('#end-screen-time').getAttribute('aria-label'), 'Time: 00:30');
+    await page.reload();
+    await page.locator('#end-screen-title').getByText('Too late', {exact: true}).waitFor();
+    assert.equal((await state()).player.ending, 'too-late');
     assert.deepEqual(errors,[]);
     console.log('PASS: Independent study uses packaged UI/actions, saves and reloads offline beneath /demo/.');
 } finally {

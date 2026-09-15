@@ -1249,7 +1249,7 @@
     "ending": {
       "title": "ending",
       "type": "object",
-      "description": "Ending definition. Controller chooses when to end play.",
+      "description": "Ending definition. Selected by a controller or clock.deadline.",
       "properties": {
         "id": {
           "type": "string",
@@ -1313,6 +1313,12 @@
       "type": "object",
       "description": "Optional clock controls; timed actions still cost minutes without this object.",
       "properties": {
+        "startTime": {
+          "type": "string",
+          "description": "Starting time of day in 24-hour HH:MM format (for example 09:30). The displayed clock adds elapsed minutes and wraps at midnight. Omit to display elapsed duration; timers and notice thresholds always use elapsed minutes.",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+          "maxLength": 5
+        },
         "minutesPerTurn": {
           "type": "integer",
           "description": "Minutes per timed commit.",
@@ -1326,9 +1332,17 @@
             "$ref": "#/$defs/clockNotice"
           },
           "description": "Threshold notices; omitted means none."
+        },
+        "deadline": {
+          "$ref": "#/$defs/clockDeadline"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "dependencies": {
+        "deadline": [
+          "startTime"
+        ]
+      }
     },
     "player": {
       "title": "player",
@@ -2774,6 +2788,29 @@
           "default": "Give to"
         }
       },
+      "additionalProperties": false
+    },
+    "clockDeadline": {
+      "title": "clockDeadline",
+      "type": "object",
+      "description": "Optional failure at the next occurrence of a time of day after clock.startTime; requires clock.startTime. Equal start and deadline times allow 24 hours.",
+      "properties": {
+        "time": {
+          "type": "string",
+          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+          "maxLength": 5,
+          "description": "Deadline time in 24-hour HH:MM format."
+        },
+        "ending": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "ID of an existing ending to trigger when the deadline is reached or passed."
+        }
+      },
+      "required": [
+        "time",
+        "ending"
+      ],
       "additionalProperties": false
     }
   }

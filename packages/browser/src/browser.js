@@ -1,5 +1,5 @@
 // Presentation and browser persistence. The entry point supplies the game factory.
-export function mountBrowser(createGame, { worldUrl = './data/game.json', serviceWorkerUrl = './service-worker.js', autoStart = true, clockLabel = 'Elapsed time' } = {}) {
+export function mountBrowser(createGame, { worldUrl = './data/game.json', serviceWorkerUrl = './service-worker.js', autoStart = true, clockLabel } = {}) {
 let game;
 let started = false;
 let ready;
@@ -24,7 +24,11 @@ const cloneModel = (...args) => game.cloneModel(...args);
 const validateWorld = (...args) => game.validateWorld(...args);
 const shouldUseSavedModel = (...args) => game.shouldUseSavedModel(...args);
 const waitTurn = () => game.dispatch({ type: 'wait' });
-const formatElapsedTime = (...args) => game.formatElapsedTime(...args);
+const formatClockTime = (...args) => game.formatClockTime(...args);
+const getClockLabel = () => clockLabel ?? (gameModel.clock?.startTime === undefined ? 'Elapsed time' : 'Time');
+const clockAriaLabel = minutes => gameModel.clock?.startTime === undefined
+    ? `${getClockLabel()}: ${minutes} minutes elapsed`
+    : `${getClockLabel()}: ${formatClockTime(minutes)}`;
 const normalizePlayerState = (...args) => game.normalizePlayerState(...args);
 const normalizePlayerCollections = (...args) => game.normalizePlayerCollections(...args);
 const movePlayer = (target) => game.dispatch({ type: 'go', target });
@@ -275,8 +279,8 @@ function updateClock() {
     const minutes = Math.floor(gameModel.player.elapsedMinutes || 0);
     const display = document.getElementById('game-clock');
     if (display) {
-        display.textContent = formatElapsedTime(minutes);
-        display.setAttribute('aria-label', `${clockLabel}: ${minutes} minutes elapsed`);
+        display.textContent = formatClockTime(minutes);
+        display.setAttribute('aria-label', clockAriaLabel(minutes));
     }
     const button = document.getElementById('wait-button');
     if (button) {
@@ -547,8 +551,8 @@ function renderEndScreen() {
     if (elapsed) {
         elapsed.hidden = !gameModel.clock;
         const minutes = Math.floor(gameModel.player.elapsedMinutes || 0);
-        elapsed.textContent = `${clockLabel}: ${formatElapsedTime(minutes)}`;
-        elapsed.setAttribute('aria-label', `${clockLabel}: ${minutes} minutes elapsed`);
+        elapsed.textContent = `${getClockLabel()}: ${formatClockTime(minutes)}`;
+        elapsed.setAttribute('aria-label', clockAriaLabel(minutes));
     }
     setElementText('end-screen-achievement-count', `Achievements: ${achievements.length}/${totalAchievements}`);
     renderAchievementList(document.getElementById('end-screen-achievements'), achievements);
@@ -1092,7 +1096,7 @@ function renderSaveSlots() {
         if (record.state === 'ready') {
             const model = record.model;
             const location = model.rooms[model.player.currentRoom].name;
-            const time = model.clock ? ` · ${formatElapsedTime(model.player.elapsedMinutes || 0)}` : '';
+            const time = model.clock ? ` · ${formatClockTime(model.player.elapsedMinutes || 0, model.clock)}` : '';
             details.textContent = `${location}${time}${model.player.gameOver ? ' · Game ended' : ''} — ${new Date(record.savedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}`;
         } else details.textContent = record.message;
         const buttons = document.createElement('div');

@@ -67,3 +67,24 @@ test('schema permits bespoke state but engine still validates graph references a
 test('attribute reference is generated from the shipped schema',()=>{
   assert.equal(fs.readFileSync(new URL('../docs/model-attributes.md',import.meta.url),'utf8'),renderReference());
 });
+
+
+test('clock startTime validates in authoring, direct engine input and saves', () => {
+  for (const startTime of ['00:00', '09:30', '23:59']) {
+    const world = structuredClone(source);
+    world.clock.startTime = startTime;
+    validateWorldData(world);
+    assert.equal(createGame(world).formatClockTime(0), startTime);
+  }
+  for (const startTime of ['24:00', '12:60', '9:30', '09:3', '09:30:00', '09:30\n', '', null, 930]) {
+    const world = structuredClone(source);
+    world.clock.startTime = startTime;
+    assert.throws(() => validateWorldData(world), /startTime/);
+    assert.throws(() => createGame(world), /clock.startTime/);
+    const game = createGame(source);
+    const saved = game.save();
+    saved.clock.startTime = startTime;
+    assert.throws(() => game.load(saved), /clock.startTime/);
+    assert.throws(() => createGame(saved), /clock.startTime/);
+  }
+});
