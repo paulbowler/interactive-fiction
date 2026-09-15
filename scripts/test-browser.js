@@ -23,12 +23,12 @@ try {
     const storyFile=path.join(project,'src/story.js');
     const story=await fs.readFile(storyFile,'utf8');
     await fs.writeFile(storyFile,story.replace('export function register(game) {', `export function register(game) {
-        game.registerScript('duskIllustration', ctx => ctx.state.player.dusk === true);
+        game.available('image', {target:'study', when: ctx => ctx.action.option === 'duskIllustration'}, ctx => ctx.state.player.dusk === true);
         game.describe('study:mural', ctx => ctx.target.examined ? 'examined' : 'default');
-        game.state.rooms.study.imageVariants[0].condition = {predicate:'duskIllustration'};`));
+`));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
-        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
+        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
@@ -70,7 +70,7 @@ try {
         return browserView.game.save();
     });
     assert.ok((await state()).player.dusk);
-    assert.equal((await state()).rooms.study.imageVariants[0].condition.predicate,'duskIllustration');
+    assert.equal((await state()).rooms.study.imageVariants[0].id,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok((await state()).player.carried.letter);
@@ -85,7 +85,7 @@ try {
     await page.locator('#room-name').getByText('Study',{exact:true}).waitFor();
     assert.ok((await state()).player.dusk);
     assert.equal((await state()).rooms.study.clues.mural.examined,true);
-    assert.equal((await state()).rooms.study.imageVariants[0].condition.predicate,'duskIllustration');
+    assert.equal((await state()).rooms.study.imageVariants[0].id,'duskIllustration');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok(await page.locator('#room-image').evaluate(img=>img.complete&&img.naturalWidth>0));

@@ -16,11 +16,6 @@ function variantCatalog(value, path) {
 }
 export function validateDescription(description, path) {
     if (description === undefined || typeof description === 'string') return;
-    // Existing conditional-segment arrays remain readable for compatible saves.
-    if (Array.isArray(description) && !isVariantArray(description)) {
-        if (description.every(part => typeof part === 'string' || (part && !Array.isArray(part) && typeof part === 'object' && typeof part.text === 'string'))) return;
-        throw new Error(`Invalid description at ${path}: invalid text segment`);
-    }
     description = variantCatalog(description, path);
     if (!description || typeof description !== 'object' || !Object.hasOwn(description, 'default'))
         throw new Error(`Invalid description at ${path}: expected a string or variants with a default`);
@@ -71,7 +66,7 @@ export function createDescriptions(game) {
     function resolve(id, entity, separateSentences = true) {
         const description = entity?.description;
         validateDescription(description, id || 'clue');
-        if (description === undefined || typeof description === 'string' || (Array.isArray(description) && !isVariantArray(description)))
+        if (description === undefined || typeof description === 'string')
             return game.buildConditionalText(description, separateSentences);
         const catalog = variantCatalog(description, id);
         let selected;

@@ -42,7 +42,8 @@ export async function buildGame({ cwd = process.cwd(), configPath = 'if.config.j
     const engineRoot = path.dirname(require.resolve(`${engineName}/package.json`));
     const engine = await json(path.join(engineRoot, 'package.json'));
     const browser = await json(path.join(browserRoot, 'package.json'));
-    if (!engine.version.startsWith('1.')) throw new Error(`Browser v1 requires engine v1, found ${engine.version}`);
+    const major = browser.version.split('.')[0];
+    if (engine.version.split('.')[0] !== major) throw new Error(`Browser v${major} requires engine v${major}, found ${engine.version}`);
     const input = async relative => {
         if (typeof relative !== 'string' || !relative || path.isAbsolute(relative) || relative.split(/[\\/]/).includes('..')) throw new Error('Build input must be a project-relative path');
         const file = path.resolve(cwd, relative);

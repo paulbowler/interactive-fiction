@@ -147,7 +147,7 @@ registerStory(game);
 game.validateWorld(game.state);
 ```
 
-The JSON5 loader and normalizer reject broken starting-room, exit, passage and key references, duplicate entity IDs across collections, contradictory capabilities, invalid native types and non-serializable values. Diagnostics identify the file and property path. Full configured-world validation additionally checks conditional prose, transport, notebook and registered script references; call it after registering story modules.
+The JSON5 loader and normalizer reject broken starting-room, exit, passage and key references, duplicate entity IDs across collections, contradictory capabilities, invalid native types and non-serializable values. Diagnostics identify the file and property path. Construction validates the complete canonical world. Loading additionally validates transport queues, notebooks and registered delayed predicates before replacing state. Executable condition/action/effect records are rejected.
 
 `if-build` parses and normalizes the authoring file, then writes `dist/data/game.json`. The authoring `.json5` file is omitted from deployment. The browser uses the compiled JSON URL, so players need no JSON5 parser. A configured `.json` world is also accepted. Custom world filenames compile to the same path with a `.json` extension; set the view's `worldUrl` accordingly.
 
@@ -159,3 +159,33 @@ Put an optional `prose` dictionary on the entity that owns its named report stri
 Use `transports` for named vehicles or conveyances with a boarding space and defined stops. Each transport owns its journey state; its `space: {room: 'interiorId'}` owns the occupants through normal room containment. Stops map stable stop IDs to ordinary room IDs. When the IDs match, write `stops: ['westBank', 'eastBank']`; otherwise use `stops: {west: {room: 'westBank'}, east: {room: 'eastBank'}}`. The normalizer expands arrays into the same runtime dictionary without changing IDs or saves. The normalizer supplies empty journey bookkeeping and creates inspectable boarding connections. Controls and exceptional journey rules stay in JavaScript, with all report text in named model prose. See the [transport schema, defaults and controller API](feature-reference.md#transport).
 
 Room-backed spaces are supported now. Enterable-container and rideable-supporter spaces are not yet supported and are rejected rather than treated as rooms.
+
+## Door connections and departure footing
+
+Link an exit to a door with a readable object reference:
+
+```json5
+exits: {
+  hall: { door: 'oakDoor' },
+},
+items: {
+  oakDoor: {
+    name: 'Oak Door',
+    door: true,
+    openable: true,
+    lockable: true,
+    locked: true,
+    lockedMessage: 'The oak door is locked.',
+  },
+},
+```
+
+The standard engine reads that door's lock and opening state. A door without
+`openable` does not need a separate opening action after unlocking. Add the same
+`door` reference to the reverse exit when appropriate. Missing references and
+references to ordinary non-door objects fail validation.
+
+An exit such as `loft: { standingOn: 'crate' }` describes departure from a
+climbable object. The object must exist and expose `climbable`; ordinary movement
+away from that footing requires climbing down. Exceptional puzzle prerequisites
+belong in controller rules. See [navigation queries](api.md#navigation-and-exit-text).

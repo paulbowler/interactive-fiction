@@ -17,7 +17,7 @@ This reference covers the built-in feature families in platform 1.5. Read [World
 | Achievements and endings | [Progress](#achievements-and-endings) |
 | Notebook recording and text input | [Notes and input](#notebooks-and-recorded-input) |
 | Choices, tool actions, configured callbacks | [Controller configuration](#controller-interaction-configuration) |
-| Conditional prose, visibility and state queries | [Conditions](#condition-reference) |
+| Conditional prose, visibility and state queries | [Read-only queries](#read-only-queries) |
 | Clock, delayed events, item timers | [Time](#clock-and-delayed-events) |
 | Actor cues, missions, physical transport | [Actors and transport](#actors-missions-and-transport) |
 | Rules, events, action results, deterministic saves, alternate views, deployment | [API](api.md) |
@@ -34,10 +34,13 @@ This reference covers the built-in feature families in platform 1.5. Read [World
 | `startScreen.imageUrl`, `imagePosition` | Opening illustration and crop alignment |
 | Room `name`, `description` | Display name and string or named-variant description |
 | Room `items`, `exits`, `scenery` | Dictionaries keyed by stable IDs; exits are keyed by destination room |
-| Room `cues` | **Controller configuration.** Conditional prose shown with current observations; source each passage from named model prose |
-| Room `observations` | **Controller configuration.** Array of `{condition, text}`; report a false-to-true condition change across the current turn's scheduler update, while the player stays in that room |
+| Exit `door` | Door ID; locked or closed openable doors block ordinary travel |
+| Exit `standingOn` | Climbable departure-footing object ID |
+| Exit `variants` | Ordered named presentation alternatives selected by read-only `exitVariant` availability |
+| Room `cues` | Named `{id, text}` entries shown while their read-only `cue` availability predicate allows them |
+| Room `observations` | Named `{id, text}` entries; report a false-to-true `cue` availability change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
-| Room `imageVariants` | Ordered `{condition, imageUrl, imagePosition?}` array; first matching variant supplies the current image |
+| Room `imageVariants` | Ordered `{id, imageUrl, imagePosition?}` array; the first variant allowed by the `image` query supplies the image |
 | Object `name`, `article` | Name and grammatical article (`a`, `an`, `the`); keep articles out of names where possible |
 | Entity `prose` | Optional named text catalog on a room, object, actor, scenery feature or transport; selection belongs in the controller. Object prose stays on the entity at runtime, alongside `description`, and travels with it. |
 | Object `description`, `detail` | String or named-variant description and additional examination detail string |
@@ -64,15 +67,15 @@ game.describe('gallery', ctx =>
   ctx.game.findItem('lamp').item.properties.turnedOn ? 'lit' : 'default');
 ```
 
-Other conditional prose fields accept strings or arrays of strings and `{condition, text}` segments. All matching segments concatenate in order; preserve spaces between them. Entity descriptions also accept these segment arrays, but named alternatives must not contain conditions or mix with segments. Start/end screen `text` arrays are **paragraphs**; use a nested segment array for a conditional paragraph.
+Reading, climb feedback and actor report text accept strings or arrays containing strings and named `{id, text}` segments. Read-only `text` availability queries select segments; all allowed segments concatenate in order. Preserve spaces between them. Start/end screen `text` arrays are **paragraphs**; use a nested named-segment array for a composed ending paragraph. Views obtain the selected ending paragraphs from `game.getEndingText()`. See [Named report and text queries](api.md#named-report-and-text-queries).
 
-In room/examination prose, `[[sceneryID]]` displays the current scenery `name`, falling back to `title` and then the ID. Capitalization is used exactly as authored. `[[item:objectID]]` uses the object name. `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after condition evaluation.
+In room/examination prose, `[[sceneryID]]` displays the current scenery `name`, falling back to `title` and then the ID. Capitalization is used exactly as authored. `[[item:objectID]]` uses the object name. `[[label|sceneryID]]` links to scenery in the current room, `[[label|item:objectID]]` links to an accessible object, and `**text**` adds emphasis. This is limited inline markup, not a general Markdown renderer. Start/end paragraphs are plain text after engine text selection.
 
 Room `scenery` contains examinable features such as murals, windows and notices. A feature need not reveal a clue. Its ID is local to its room; use `roomID:sceneryID` for description resolvers. Omit the collection when there are no features. Do not declare both `scenery` and `clues` in one room.
 
-The loader compiles room `scenery` to `rooms[roomID].clues` in the v1 runtime/save format. Controllers use that runtime path; there is only one mutable collection. Existing `clues` input remains accepted. The examination action retains the public name `examineClue`:
+The loader compiles room `scenery` to the canonical `rooms[roomID].clues` collection. Controllers use that runtime path; there is only one mutable collection. The examination action retains the public name `examineClue`:
 
-`dispatch({type:'examineClue', target:'gallery:mural'})` marks `feature.examined` and normally saves without advancing time. Use rules on `examineClue` for discovery consequences. A controller may configure `feature.onExamine` with `once`, `condition`, `consumesTurn` and registered `effects`; that behavior belongs outside JSON5. `examined` and `onExamine.examined` are runtime progress.
+`dispatch({type:'examineClue', target:'gallery:mural'})` marks `feature.examined` and normally saves without advancing time. Use rules on `examineClue` for discovery consequences. An after rule can record a discovery flag and call `ctx.commit()` when that discovery costs a turn. `examined` is runtime progress.
 
 For scenery with ordinary actions (opening a window, pushing a statue), declare an object in room `items` instead. Its optional `scenery: true` flag suppresses automatic listing while preserving normal actions. Room `scenery` and the object listing flag have different roles; neither implies a puzzle reward or discovery.
 
@@ -84,38 +87,38 @@ For scenery with ordinary actions (opening a window, pushing a statue), declare 
 | `label` | String overriding the linked room name |
 | `description` | String from which display text can be derived; prefer explicit `before`/`after` |
 | `listed` | Boolean; `false` omits this exit from the automatic list, without removing the connection |
-| `visibleWhen` | Condition; false prevents both listing and travel |
-| `condition` | **Blocking** condition: a true ordinary condition blocks travel with its `message` |
-| `variants` | **Controller configuration.** Ordered display alternatives with optional `id`, `before`, `after`, `label` and a condition; first match wins. Keep the wording in named model prose. Does not replace the base travel checks. |
+| `door` | Door object ID; locking or closing an openable door blocks this connection |
+| `standingOn` | Climbable object ID required as departure footing |
+| `variants` | **Controller configuration.** Ordered display alternatives with `id` and optional `before`, `after`, `label`; the first permitted `exitVariant` query wins. Keep the wording in named model prose. Does not replace the base travel checks. |
 | `successMessage`, `successTitle` | Travel feedback; title defaults to `Done` for immediate movement |
 | `deferMoveUntilMessageClosed` | Boolean; delays successful movement until feedback is acknowledged |
-| `beforeMove` | `{condition?, message, title?}`; an acknowledged pre-travel message, default title `Before Moving` |
+| `beforeMove` | `{message, title?}`; an acknowledged pre-travel message, default title `Before Moving` |
 
-A blocker must provide a nonempty `message`: navigation uses the returned message to stop travel. Do not confuse an exit's blocking `condition` with `visibleWhen`, which must be true to allow visibility/travel.
+Declare ordinary door relationships directly:
 
 ```json5
 {
-  exits: {
-    hall: {
-      before: 'a door leads to the ',
-      condition: {
-        type: 'itemState', item: 'oakDoor', state: 'door.locked',
-        value: true, message: 'The oak door is locked.',
-      },
-    },
-  },
+  exits: { hall: { before: 'a door leads to the ', door: 'oakDoor' } },
   items: {
-    oakDoor: { name: 'Oak Door', door: true, openable: true, lockable: true, locked: true },
+    oakDoor: {
+      name: 'Oak Door', door: true, openable: true, lockable: true,
+      locked: true, lockedMessage: 'The oak door is locked.',
+    },
     archway: { name: 'Archway', scenery: true, passage: { destination: 'hall', label: 'Enter' } },
   },
 }
 ```
 
-The door's state does not automatically block an exit; declare the relationship in the exit. Add a closed-door condition too if passage requires an open door. `passage.destination` references an existing room and uses the current room's exit to implement Enter.
+The engine checks the declared door's lock and open state. `passage.destination`
+references an existing room and uses the current room's exit to implement Enter.
+Exceptional prerequisites belong in before rules and shared availability queries,
+registered for both `go` and `enter` when needed. An `exit` availability query
+controls visibility; see [Navigation and exit text](api.md#navigation-and-exit-text).
 
-For multiple prerequisites, an exit can use `condition: {type:'requirements', requirements:[{item, state, value?, message?}], message}`. Each requirement is an item-state equality with default `value:true`. One unmet requirement uses its message; several use the group message. This special form belongs on exit blockers, not general prose predicates.
-
-Deferred movement is saved in `player.pendingAction`. `acknowledgeMessage` completes it; other actions are blocked while it is pending. Standing on a climbable object normally blocks movement until climbing down. An exit requirement for that object's `climbable.climbed` state is the supported elevated-route exception.
+Deferred movement is saved in `player.pendingAction`. `acknowledgeMessage`
+completes it; other actions are blocked while it is pending. Standing on a
+climbable object blocks departure except through an exit declaring that object's
+ID in `standingOn`.
 
 ### Naming report alternatives
 
@@ -136,19 +139,21 @@ Keep initial exit wording on the exit. Put alternative text in a named `prose` c
 Construct the runtime alternatives in the controller, where the condition and selection priority belong:
 
 ```js
-game.registerScript('doorsAreOpen', ctx => ctx.state.player.doorsOpen === true);
 game.state.rooms.gallery.exits.hall.variants = [{
   id: 'doorsOpen',
-  condition: { predicate: 'doorsAreOpen' },
   before: game.state.rooms.gallery.prose.openHallDoors,
 }];
+game.available('exitVariant', {
+  target: 'gallery', secondaryTarget: 'hall',
+  when: ctx => ctx.action.option === 'doorsOpen',
+}, ctx => ctx.state.player.doorsOpen === true);
 ```
 
 Reserve top-level `prose` for genuinely shared game text. There is no implicit lookup, inheritance or fallback between catalogs: controllers read a specific entity’s catalog. Reacquire object references after loading, and find movable objects by ID instead of a starting-room path. Catalog entries do not automatically override built-in engine/browser messages.
 
 The engine does not infer a condition from an ID or resolve prose-key strings automatically: controller JavaScript reads the catalog explicitly. Exit, NPC cue and mission variants use their ordinary runtime selection semantics; they are not `game.describe` catalogs. Keep runtime ordering stable when saved report progress uses indexes. For individually addressable cue, observation and sound passages, give each string a key in model prose. The controller assembles runtime arrays from those names in the intended order. An array position is not a persistent authoring ID.
 
-Apply the same separation to conditional action feedback: store named messages in model prose, then construct conditional `climbable.message` segments in the controller. `buildConditionalText` renders matching runtime segments. Unlike entity `description`, report segments do not require a `default` ID. Plain unconditional feedback and initial state can remain on the object: `climbed: false`, `downMessage` and `movementBlockedMessage` do not select behavior.
+Apply the same separation to conditional action feedback: store named messages in model prose, then construct named `climbable.message` segments in the controller. A `text` availability query with `field: 'climb'` selects them; the standard climb action renders the result. Unlike entity `description`, report segments do not require a `default` ID. Plain unconditional feedback and initial state can remain on the object: `climbed: false`, `downMessage` and `movementBlockedMessage` do not select behavior.
 
 ### Named cues, observations and sounds
 
@@ -158,23 +163,27 @@ A cue describes a currently true condition. An observation reports a condition b
 rooms: {
   gallery: {
     prose: {
-      torchAbove: 'A torch beam crosses the landing.',
-      guardBoardsLift: 'The guard steps into the lift.',
-      echoingSteps: 'Radio: Footsteps echo across the marble.',
-      squeakingSole: 'Radio: A sole squeaks on the polished floor.',
+      lanternAbove: 'A lantern glows on the upper balcony.',
+      curatorEntersArchive: 'The curator enters the archive.',
+      echoingSteps: 'Footsteps echo across the marble.',
+      squeakingSole: 'A sole squeaks on the polished floor.',
     },
   },
 },
 ```
 
-After registering the predicates in JavaScript, configure the runtime:
+Use the model-owned passages in named report entries, then register read-only availability:
 
 ```js
 const room = game.state.rooms.gallery;
-room.cues = [{condition: {predicate: 'guardAbove'}, text: room.prose.torchAbove}];
-room.observations = [{condition: {predicate: 'guardInLift'}, text: room.prose.guardBoardsLift}];
-const guard = game.findItem('guard').item;
-guard.properties.npc.missions.sounds = {
+room.cues = [{id: 'lanternAbove', text: room.prose.lanternAbove}];
+room.observations = [{id: 'curatorEntersArchive', text: room.prose.curatorEntersArchive}];
+game.available('cue', {target: 'gallery', when: ctx => ctx.action.option === 'lanternAbove'},
+  ctx => ctx.game.findItem('curator').owner.key === 'balcony');
+game.available('cue', {target: 'gallery', when: ctx => ctx.action.option === 'curatorEntersArchive'},
+  ctx => ctx.game.findItem('curator').owner.key === 'archive');
+const curator = game.findItem('curator').item;
+curator.properties.npc.missions.sounds = {
   gallery: [room.prose.echoingSteps, room.prose.squeakingSole],
 };
 ```
@@ -193,7 +202,7 @@ Keep array order in the controller stable to preserve cue priority, observation 
 | `requiresHeld` | False when absent. Most uses require the item directly in `player.carried`; examination/read and taking it out remain available. |
 | `retain` | False when absent. Keeps the original item in hand after a special insertion/swipe unless its action deliberately moves/replaces it. |
 | `wearable` | `true` or `{removable:false, removeMessage:'...'}`. Wear moves a directly carried object to `player.worn`; Remove moves it back. |
-| `takeOutCondition`, `takeOutMessage` | Optional condition and failure string restricting removal from a container. |
+| Removal restrictions | Register a `before` rule for `take`, with matching availability when the menu should hide it. |
 | `weight` | Optional nonnegative number, stored for controller use. No built-in capacity/weight limit. |
 
 `player.carried` and `player.worn` contain object definitions, not ID arrays. Owned items can be nested in bags. **Owned**, **accessible** and **directly carried** are distinct: a closed bag still belongs to the player, but its contents cannot be used. Tool/key menu options may require direct carrying. `findItem(id)` returns `{item, owner, parentItems, path, accessible, key}`; use `isReachableItem`, `canActOnItem`, `isPlayerOwnedLocation` and `hasAccessiblePlayerItem` when implementing an unusual interaction.
@@ -215,7 +224,7 @@ Custom fields are allowed and persist under runtime `properties`. A field has no
 
 `lockMessage` and `unlockMessage` customize door feedback. The container lock handlers use standard feedback; use a report rule to adjust that response. A keyless `lockable:true` object supports manual locking/unlocking. For mechanisms operated only through special rules, do not accidentally expose a free manual Unlock option.
 
-Ordinary Put uses `accepts`, accessibility and cycle checks. An `insertable` entry takes precedence over ordinary placement for that item. Its controller-installed `action` runs first; the surviving original item moves into the target unless either its own or the entry's `retain` is true. This supports a retained token swipe, as distinct from physically depositing a token. Dispatch `useOn` with the held item as `target` and device as `secondaryTarget`.
+Ordinary Put uses `accepts`, accessibility and cycle checks. An `insertable` entry takes precedence over ordinary placement for that item. The ordinary action moves the item into the target unless either its own or the entry's `retain` is true. Register an instead rule for bespoke device behavior. This supports a retained token swipe, as distinct from physically depositing a token. Dispatch `useOn` with the held item as `target` and device as `secondaryTarget`.
 
 Connection authoring:
 
@@ -234,7 +243,7 @@ Connection authoring:
 }
 ```
 
-Connection entries also support `title`/`disconnectTitle` and controller-installed `action`/`disconnectAction`. Only one target is connected per item; connecting clears other connection flags. The connected item's menu focuses on disconnection. Player movement clears connections on carried/worn items, including nested contents. The `itemConnected` condition queries this state.
+Connection entries also support `title`/`disconnectTitle`. Use after rules for connection consequences. Only one target is connected per item; connecting clears other connection flags. The connected item's menu focuses on disconnection. Player movement clears connections on carried/worn items, including nested contents. Rules inspect the named target's `connected` flag.
 
 ## Ordinary interactions
 
@@ -243,15 +252,15 @@ Structured capabilities keep their configuration object; only container/door fie
 | Capability | Authoring fields and semantics |
 | --- | --- |
 | `readable` | `{text, noteSources?}`. Text is prose; `noteSources` lists source IDs offering notebook actions in the reading dialog. Read consumes a turn and does not automatically set a `read` flag. |
-| `searchable` | `{once?, searched?, message?, title?}`. First search sets `searched:true` and consumes a turn. `once:true` prevents repetition. A controller can supply `action` for discovery. |
-| `pushable` | `{pushed?, condition?, pushedLabel?, unpushedLabel?, pushedDescription?, unpushedDescription?}`. Push sets `pushed:true`; labels annotate item names and descriptions reflect state. |
+| `searchable` | `{once?, searched?, message?, title?}`. First search sets `searched:true` and consumes a turn. `once:true` prevents repetition. Use an after rule for discovery. |
+| `pushable` | `{pushed?, message?, title?, pushedLabel?, unpushedLabel?, pushedDescription?, unpushedDescription?}`. Push sets `pushed:true`; labels annotate item names and descriptions reflect state. |
 | `pullable` | `{label?, message?, title?}`. Pull resets the same object's `pushable.pushed` state. Requires a pushed object. |
 | `climbable` | `{climbed?, message?, downMessage?, movementBlockedMessage?, standingDescription?}`. Climb sets player posture to `{type:'standingOn', item:id}`; climbDown clears it. Normally climb down before pushing, pulling or traveling. |
 | `turnable`, `turnedOn` | Boolean capability and state. Turn On/Off changes `turnedOn` and consumes a turn. `turnedOn` alone does not offer switching. |
-| `pressable` | `{label?, message?, title?}`. Offers Press; meaningful effects come from a registered rule or controller-installed action. Message-only presses do not consume a turn by default. |
+| `pressable` | `{label?, message?, title?}`. Offers Press; meaningful effects come from a registered rule. Message-only presses do not consume a turn by default. |
 | `edible` | `{outcomeText, consumed:true}`. Eating an accessible owned item reports the text, deletes it and commits a turn when consumed. Without `consumed:true`, the handler reports text without consuming the item/turn. |
 | `tool` | `{capabilities:['cut']}`. A directly carried tool can act on matching accessible targets. Capability names are story-selected strings. |
-| `cuttable` | `{capability:'cut', tool?:'specificToolID'}`. Restricts which tools match; a controller supplies available `actions` with labels, conditions and actions. |
+| `cuttable` | `{capability:'cut', tool?:'specificToolID'}`. Restricts which tools match; named `options:[{id,label}]` supply the controls; `tool` availability and action rules select and handle them. |
 
 Use rules for unusual effects; these flags do not automatically reveal secrets or solve puzzles. There is no built-in generic Talk, Give, natural-language parser, capacity system, or general-purpose Use fallback. Register new actions when needed; [extending the engine](extending.md) explains the boundary.
 
@@ -283,7 +292,7 @@ game.after('take', 'letter', ctx => {
 
 `awardAchievement(id)` returns true only for a newly earned, defined achievement; repeat/unknown IDs return false. It records `state.player.achievements[id]=true`, emits `achievementEarned` with the definition, and notifies the view. The browser queues a popup and shows earned/total counts and descriptions. Awarding alone does not commit a turn or save: call it within a committed interaction, or explicitly commit an external controller mutation. `getEarnedAchievements()` returns earned definitions with IDs; `getTotalAchievementCount()` returns the defined total. Do not prefill runtime achievement bookkeeping for a fresh game.
 
-Endings use an `id`, `title` (or `name` fallback), `text`, optional `kicker`, `imageUrl`/`imagePosition`, and optional `encounter.description`. The encounter appears before the ending screen and is continued with `acknowledgeEnding`. Text arrays are paragraphs and can contain conditional paragraph arrays.
+Endings use an `id`, `title` (or `name` fallback), `text`, optional `kicker`, `imageUrl`/`imagePosition`, and optional `encounter.description`. The encounter appears before the ending screen and is continued with `acknowledgeEnding`. Text arrays are paragraphs and may contain named segments selected by `text` availability queries with `field: 'ending'`.
 
 ```js
 game.after('go', 'garden', ctx => {
@@ -310,7 +319,7 @@ A notebook is an owned, open container. Notes are top-level item prototypes. A s
 }
 ```
 
-`container` and `entry` are required IDs. Optional `condition` controls availability. `buttonLabel` overrides the button, otherwise `label` supplies a suffix to “Make a note”. `onExamine:false` suppresses the direct item-menu recording option; it is a display boolean, not a callback. `offerInput:true` offers input destinations after recording. `message` overrides feedback.
+`container` and `entry` are required IDs. A `record` availability query controls availability. `buttonLabel` overrides the button, otherwise `label` supplies a suffix to “Make a note”. `onExamine:false` suppresses the direct item-menu recording option; it is a display boolean, not a callback. `offerInput:true` offers input destinations after recording. `message` overrides feedback.
 
 Recording requires an accessible source, an accessible owned/open notebook, a defined prototype and no live copy of the note ID. It creates a cloned note in the notebook and consumes a turn. `readable.noteSources` and controller message `noteSources` can offer recording separately from the source's direct menu.
 
@@ -318,88 +327,69 @@ A note prototype can have `textValue:'ORCHARD'`, `textInputLabel:'Enter into'`, 
 
 **Dispatch order:** `game.dispatch({type:'enterText', target:'copiedWord', secondaryTarget:'terminal'})` uses the note first and input device second. Free-form entry uses `{type:'submitInput', target:'terminal', value:'ORCHARD'}`. Configure input handling in the controller as described next.
 
-## Controller interaction configuration
+## Choices and input
 
-The rule API is preferred for new exceptions. Existing generic choice/device interfaces also accept serializable configuration attached by `register(game)`. These examples are JavaScript configuration, **not world JSON5**.
+Declare controls and their display text in the model. `choices` is an array of
+`{id, label, prompt?, options?}`; each option has an `id`, `label`, and optional
+`disabled` boolean. `input` supplies `label`, `prompt`, `notesOnly`, `failureMessage`
+and `failureTitle`. A notes-only input permits recorded values while hiding
+free-form entry. Named choices, options and input controls contain no programs.
 
 ```js
-game.registerScript('terminal.acceptWord', ctx => {
-  ctx.state.player.wordAccepted = true;
+import { HANDLED } from '@paulbowler/if-engine';
+
+game.instead('submitInput', 'terminal', ctx => {
+  const terminal = ctx.target;
+  const accepted = String(ctx.action.value).trim().toUpperCase() ===
+    ctx.game.findItem('inscription').item.properties.textValue.toUpperCase();
+  ctx.say(terminal.prose[accepted ? 'accepted' : 'rejected']);
+  if (accepted) {
+    terminal.properties.authorized = true;
+    ctx.commit();
+  }
+  return HANDLED;
 });
-game.findItem('terminal').item.properties.input = {
-  label: 'Enter word', prompt: 'Enter the inscription',
-  notesOnly: false, caseSensitive: false,
-  accepted: [{ value: 'ORCHARD', action: {
-    effects: [{ script: 'terminal.acceptWord' }], message: 'Accepted.',
-  } }],
-  failureMessage: 'That word is not recognised.', failureConsumesTurn: false,
-};
 ```
 
-Input configuration also accepts `condition`, `failureTitle`; accepted entries can use `values` arrays and per-response `caseSensitive`. Matching trims whitespace and ignores case unless either caseSensitive flag is true. `notesOnly:true` hides free-form entry but permits recorded input. Failed input advances time only when `failureConsumesTurn:true`.
+The controller reads both the expected value and response text from the model.
+For choices use `instead('choose', ...)` and `ctx.action.choice`; submenu rules
+use `chooseOption` and `ctx.action.option`. Tool rules use `tool` with the held
+tool as `target`, the object as `secondaryTarget`, and the named option ID.
+Unimplemented choices do not silently mutate or spend a turn. Generic rejected
+input is free unless its `failureConsumesTurn` flag explicitly requests a turn.
 
-A configured **action payload** supports:
+Ordinary Take, Put, Open, Read, Search and connection consequences use after
+rules. Exceptional behavior uses before or instead rules. No action/effect
+records execute from the model or runtime state.
 
-| Field | Behavior |
-| --- | --- |
-| `condition` | Must be true before the action runs |
-| `effects` | Array of `{script:'registeredID'}` executed in order |
-| `update` | `{item, attribute, newValue}`; full runtime path, e.g. `properties.turnedOn` |
-| `message` / `messages` | Feedback string, or nonempty array for deterministic varied feedback; last choice stored in `lastMessage` |
-| `messageSuffix` | Conditional prose appended to feedback |
-| `title` | Feedback title, default `Done` |
-| `noteSources` | Source IDs offering note-recording controls |
-| `consumesTurn` | Set true to charge a turn even without state changes |
+## Read-only queries
 
-`performAction(payload)` reports whether state changed or a turn was explicitly requested; its caller commits the interaction. Merely displaying a static message normally does not commit. A source with `actions:[...]` selects the **first** matching conditional action, falling back to `action`. Do not confuse this selection with prose segment concatenation.
+Use JavaScript predicates registered with `game.available`. They return booleans
+and must not mutate state, publish events, consume randomness or spend turns.
+Menus and dispatch share action availability. Presentation queries cover named
+text, room images, exit variants, actor reports, cues and observations. See the
+complete [query contracts](api.md#named-report-and-text-queries).
 
-Controller attachment points:
+Useful state queries include `findItem(id)`, `isDirectlyCarriedLocation(location)`,
+`isPlayerOwnedLocation(location)`, `hasAccessiblePlayerItem(id)` and
+`getItemPropertyValue(item, path)`. Read state with ordinary JavaScript comparisons;
+missing values remain distinct from explicit false values.
 
-- `properties.choices`: array of `{label, prompt?, condition?, action?, actions?, options?}`. Options have `label`, `condition`, `disabledWhen`, and `action`/`actions`; `choose` uses `index`, and `chooseOption` uses `choiceIndex`/`optionIndex`.
-- `properties.input`: the input configuration above.
-- `properties.pressable.action` / `.actions`; `properties.searchable.action`; `properties.pullable.action`.
-- `properties.pushable.onPush`: action payload or conditional `actions`; additionally supports `createExit:{target,before,after}`. Prefer navigation rules for complex topology changes.
-- `properties.cuttable.actions`: `{label, condition?, action}` entries; dispatch `tool` with the tool ID and index from `getToolActions`.
-- `properties.container.insertable[itemID].action`; `properties.container.onPut`: `{item, condition?, action}` entries, first matching ordinary placement reaction.
-- `properties.connectable.targets[targetID].action` / `.disconnectAction`.
-- `properties.onExamine` and `properties.readable.action` accept action payloads; clue `onExamine` has the discovery configuration described above. Controller-installed ending `effects` run when `endGame` is called.
-
-`onTake` and `onMove` are not automatic standard action triggers. Use `after('take', ...)` and the `itemMoved` event rather than expecting a stored field to execute.
-
-Register script IDs in every new runtime before loading saves. A `{predicate:'registeredID'}` condition refers to a synchronous controller predicate; it is installed by the controller. Script callbacks receive `game.context()` rather than necessarily the originating action's target; capture stable IDs, not mutable state objects, and reacquire `game.state` after loading.
-
-## Condition reference
-
-Conditions are data queries. Most boolean queries default `value` to true; setting it false negates that query. Missing condition means true.
-
-| `type` | Fields / meaning |
-| --- | --- |
-| `itemState` (also omitted type) | `item`, `state`, `value?`: strict equality at a path relative to item runtime `properties`, e.g. `container.opened`. No coercion; missing is not false. |
-| `hasItem` | `item`, `value?`: directly carried, not worn or inside a bag |
-| `ownsItem` | `item`, `value?`: any owned inventory depth, regardless of accessibility |
-| `itemInContainer` | `item`, `container`, `value?`: immediate container owner |
-| `itemInRoom` | `item`, `room`, `value?`: immediate room owner, not nested contents |
-| `itemConnected` | `item`, `target`, `value?`: connection flag |
-| `itemExists` | `item`, `value?`: live item exists; prototypes alone do not count |
-| `currentRoom` | `room`: exact current player room; use `not` to negate |
-| `roomVisited` | `room`, `value?`: recorded visit |
-| `clueExamined` | `room`, `clue`, `value?`: clue examination progress |
-| `elapsedTime` | Inclusive numeric `min` / `max` minutes; requires eligible known timing |
-| `all`, `any` | `conditions` array, logical AND / OR |
-| `not` | A single nested `condition` |
-| `requirements` | Special exit-prerequisite form; see Navigation |
-
-`visibleWhen`, description segments, image variants, note conditions, choices and observation conditions use positive truth. Exit `condition` has the blocking interpretation described above. Conditions do not mutate the world.
+Only serialized delayed work refers to registered predicates by name. Register
+with `registerPredicate(id, callback)` and reference `{predicate:id}` in a timer's
+`waitUntil` or transport request's `condition`. The callback receives current
+context and must return a boolean. This is a callback reference, not an expression
+language. Immediate decisions belong in action and availability rules.
 
 ## Clock and delayed events
 
 `clock.minutesPerTurn` is a positive integer, default 1 when a clock is declared. `clock.notices` is an array of `{minute, text}`: notices fire when a successful timed action crosses a threshold, even if its step skips over the exact minute. Declare a clock to show the browser time/wait controls. Timed commits still count minutes at the default rate without those controls.
 
-Successful mutations, including Read and recording a note, usually cost one turn. Look and examination are normally free; an examination can still save discovery changes. Failed actions do not advance time unless a configured interaction explicitly charges them. Ending play stops further world advancement.
+Successful mutations, including Read and recording a note, usually cost one turn. Look and examination are normally free; an examination can still save discovery changes. Failed actions do not advance time unless its action rule explicitly charges them. Ending play stops further world advancement.
 
 Use `schedule.afterTurns(count,event,data)` for new delayed reactions; save its returned ID if cancellation is needed. A scheduled job counts the current action's upcoming commit when scheduled before that commit, including from an after rule. Zero waits until the next scheduler advance, not immediate recursive delivery. Jobs due in the same advance run in registration order.
 
-An item-scoped timer is available through `startTimer({item, turns, effects, waitUntil?})`. It replaces the item's timer, has a one-update `justStarted` grace, decrements on later timed updates, and removes itself before running its registered effects. At zero it can wait for `waitUntil` to become true. Cancel it by deleting the item's runtime `properties.timer`.
+An item-scoped timer is available through `startTimer({item, turns, event?, data?, waitUntil?, justStarted?})`. It replaces the item's timer, has a one-update `justStarted` grace, decrements on later timed updates, and removes itself before publishing its named event. Set `justStarted:false` for a chained timer that should count the next update immediately. At zero it can wait for `waitUntil` to become true. Cancel it by deleting the item's runtime `properties.timer`.
 
 Commit order: after-action rules at the commit boundary → elapsed minutes/clock notices → `stateCheck` → `checkEndings` → transports → item timers → actor missions → scheduled events → room observations/actor cues → `checkEndings` → view/save. A free commit skips timed updates. Ordering is part of gameplay; do not manually call scheduler advancement in ordinary story rules.
 
@@ -409,27 +399,27 @@ Actors are ordinary objects with `npc:{...}`; they remain in room/item collectio
 
 ### Actor cues
 
-`npc.state` is a story-defined state string. `nearbyDescription` supplies conditional prose for adjacent accessible rooms. `movementCue` has `condition`, `description`, or ordered `variants:[{condition?, texts:[...]}]`. `turnCue` has `condition`, `intermittent`, and `variants:[{condition?, texts:[...], repeatTexts?:[...]}]`. Text variation uses the saved random seed and avoids immediate repetition when alternatives exist.
+`npc.state` is a story-defined state string. `nearbyDescription` supplies prose for adjacent accessible rooms. `movementCue` has a description or ordered `variants:[{id, texts:[...]}]`. `turnCue` has `intermittent` and `variants:[{id, texts:[...], repeatTexts?:[...]}]`. `npcCue`, `npcCueVariant` and `text` availability select their reports. Text variation uses the saved random seed and avoids immediate repetition when alternatives exist.
 
 Reports are stored in player movement cues. Explicit mission reports supersede incidental fresh movement sound from the same actor. Runtime fields such as `lastTurnCue`, `lastTurnCueVariant`, `lastMissionReport`, `ambientCountdown`, and movement cue `lastText` need no initial bookkeeping.
 
 ### Missions
 
-`npc.missions` defines ordinary routes, destinations and phase labels. Route selection uses edge conditions, not the player exit blocker automatically; encode the appropriate door/access checks on route edges too. Keep exceptional triggers and registered effects in controller configuration.
+`npc.missions` defines ordinary routes, destinations and phase labels. Routes are an explicit graph and do not inherit player exit restrictions. Use mission availability and event listeners for exceptional readiness, route preparation and arrival consequences.
 
 | Field | Contract |
 | --- | --- |
 | `home`, `idleState` | Home room ID and resting state string |
 | `states` | Strings for `outbound`, `searching`, `returning` |
-| `routes` | Room-keyed arrays of edges `{to, condition?, transport?, effects?}`; routing uses breadth-first search over these permitted edges; non-transport edges must correspond to actual room exits |
+| `routes` | Room-keyed arrays of edges `{to, transport?}`; routing uses breadth-first search over these edges; non-transport edges must correspond to actual room exits |
 | `destinations` | Dictionary keyed by mission ID; each entry needs a `room` and positive integer `searchTurns` |
-| Destination availability | `condition` gates starting; `repeatWhen` permits repeating a completed destination |
+| Destination availability | `mission` availability gates starting; completed destinations cannot restart unless explicitly forced |
 | Destination prose | `departure`, `departureReply`, `arrival`, `finished`: arrays of varied report strings |
-| Destination `variants` | **Controller configuration.** First matching conditional override for visit duration, arrival/finished prose and configured effects; each variant supplies a positive integer `searchTurns` |
+| Destination `variants` | **Controller configuration.** First permitted `missionVariant` override for visit duration and arrival/finished prose; each variant has a unique `id` and positive integer `searchTurns` |
 | `homeReport`, `blockedReport` | Varied report arrays |
 | `sounds` | **Controller configuration.** Room-keyed ambient report arrays assembled from named prose; preserve order for seeded variation and saved history |
 
-Start with `game.startMission({item:'courier', destination:'inspectGarden', force:false})` inside a committed interaction. Returns false when unavailable or unreachable. `force` bypasses active/completed restrictions, not destination conditions or missing routes. Starting removes the actor's item timer. Saved `npc.mission` holds `active`, `destination`, `phase`, countdown and transport ride; `npc.completed` records completed destinations. Completion occurs after searching, before returning home. A state change away from the expected phase interrupts the mission. Without a route, it reports blockage and returns to idle state without teleporting home.
+Start with `game.startMission({item:'courier', destination:'inspectGarden', force:false})` inside a committed interaction. Returns false when unavailable or unreachable. `force` bypasses active/completed restrictions, not availability checks or missing routes. Starting removes the actor's item timer. Saved `npc.mission` holds `active`, `destination`, `phase`, countdown and transport ride; `npc.completed` records completed destinations. Completion occurs after searching, before returning home. A state change away from the expected phase interrupts the mission. Without a route, it reports blockage and returns to idle state without teleporting home.
 
 ### Transport
 
@@ -476,7 +466,7 @@ Declare `ferryDeck`, `westBank` and `eastBank` as ordinary rooms. Put occupants 
 
 Currently **only room-backed spaces are supported**. `{object: 'boat'}` and supporter-backed riding are rejected explicitly. A container or supporter does not implicitly permit player boarding. Boats, trains and spacecraft can use an ordinary interior room today; object boarding can be added without changing the transport's identity or request API.
 
-Normalization creates inspectable two-way exit definitions between the boarding space and each stop room. Existing exit prose and controller restrictions are retained. The engine permits crossing only when idle, boarding is open and the transport is at that stop. Unavailable exits from inside the boarding space are hidden; an external boarding exit remains available to display its blocker message. Controller rules can add restrictions but cannot bypass the ordinary transport availability check through an exit condition.
+Normalization creates inspectable two-way exit definitions between the boarding space and each stop room. Existing exit prose and controller restrictions are retained. The engine permits crossing only when idle, boarding is open and the transport is at that stop. Unavailable exits from inside the boarding space are hidden; an external boarding exit remains available to display its blocker message. Controller rules can add restrictions but cannot bypass the ordinary transport availability check by overriding a query.
 
 Control behavior belongs in JavaScript. Within a committed interaction, request a journey:
 
@@ -486,7 +476,7 @@ const accepted = game.requestTransport({
 });
 ```
 
-This returns whether the request was accepted; it does not dispatch a player action or consume a turn by itself. A button handler still enters through `game.dispatch`. Unknown transport/stop/actor references and invalid dwell values are rejected. Duplicate actor/destination requests are rejected. Requests may include registered `condition` and arrival `effects`; these belong in controller configuration. Queued conditions are checked again when selected.
+This returns whether the request was accepted; it does not dispatch a player action or consume a turn by itself. A button handler still enters through `game.dispatch`. Unknown transport/stop/actor references and invalid dwell values are rejected. Duplicate actor/destination requests are rejected. Requests may include a named predicate `condition` and an arrival `event` with serializable `data`. Validity is checked again when dequeued and on arrival.
 
 The next eligible transport update begins departure, closes boarding and sets `phase: 'moving'`. The following transport update arrives, opens boarding and sets `stop`. A same-stop request opens boarding without starting a journey. `dwell` delays selection of another request. Entering the boarding room holds it for the current action. Boarding and NPC destination selection remain separate turns.
 
@@ -499,7 +489,7 @@ Events publish facts after transitions:
 
 Transport updates precede item timers, actor missions and scheduled events. Event handlers may react or enqueue future requests; they should not manually advance transport updates.
 
-For automatic feedback, controllers can configure `transport.notices`: `departure`, `arrival` and `opening` arrays of `{room, condition?, text}`. Read every passage from the transport’s own `prose` catalog. Only notices for the player's current room are reported. Stop-specific `effects` execute at departure; request `effects` execute at arrival only if their condition still holds. These are optional controller facilities, not required world-model fields.
+For automatic feedback, register listeners for `transportDeparted`, `transportArrived` and `transportOpened`. Read passages from the transport's own `prose` catalog, then append `{room, text}` to `state.player.turnObservations` when appropriate. Put departure consequences in the departure listener. The engine rejects `transport.notices` and stop `effects`; world structure and prose remain data.
 
 A mission route edge `{to: 'eastBank', transport: 'ferry'}` uses physical waiting → ready → boarded → riding stages. Route endpoints remain room IDs; the engine maps them to stop IDs. Actors enter the same boarding room as the player. Player interference can delay a trip; it does not teleport the actor.
 

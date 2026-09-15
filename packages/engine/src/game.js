@@ -1,6 +1,6 @@
 import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
-import { normaliseWorld } from './normalise-world.js';
+import { normaliseWorld, validateExitDoors } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
 import { createActions } from './actions.js';
 import { installDispatcher } from './dispatcher.js';
@@ -17,7 +17,7 @@ validateRuntime(gameModel);
 let dispatching = false;
 let pendingCommit = null;
 let hooks = {};
-const scripts = new Map();
+const predicates = new Map();
 const PLAYER_COLLECTIONS = ['carried', 'worn'];
 const output = (type, ...args) => { hooks[type]?.(...args); };
 const updateView = () => output('updateView');
@@ -37,6 +37,7 @@ function cloneModel(model) {
 }
 
 function validateWorld(model, referenceModel = model) {
+    validateExitDoors(model, referenceModel);
     validateWorldDescriptions(model);
     validateTransports(model);
     const object = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -96,41 +97,14 @@ function validateWorld(model, referenceModel = model) {
     function collectReferenceIds(value) {
         if (!value || typeof value !== 'object') return;
         if (value.items && typeof value.items === 'object') Object.keys(value.items).forEach((id) => ids.add(id));
-        if (value.type === 'setItemId' && typeof value.to === 'string') ids.add(value.to);
         Object.values(value).forEach(collectReferenceIds);
     }
     collectReferenceIds(referenceModel);
     Object.keys(referenceModel.player.carried || {}).forEach((id) => ids.add(id));
     Object.keys(referenceModel.player.worn || {}).forEach((id) => ids.add(id));
-    function validateTransportRequest(request, transport) {
-        require(object(request) && Boolean(transport.stops[request.destination]), 'unknown transport stop');
-        require(request.actor === undefined || request.actor === 'player' || liveIds.has(request.actor), 'unknown transport actor');
-        require(request.dwell === undefined || (Number.isInteger(request.dwell) && request.dwell >= 0), 'invalid transport dwell');
-        require(request.effects === undefined || Array.isArray(request.effects), 'transport arrival effects must be an array');
-    }
-    definitions.forEach(item => {
-        const transport = item.properties?.transport;
-        if (!transport) return;
-        require(object(transport) && Boolean(model.rooms[transport.room]), 'unknown transport room');
-        require(object(transport.stops) && Object.keys(transport.stops).length > 0, 'transport needs stops');
-        Object.keys(transport.stops).forEach(stop => require(Boolean(model.rooms[stop]), 'unknown transport stop room'));
-        require(Boolean(transport.stops[transport.currentFloor]), 'unknown current transport stop');
-        require(typeof transport.doorsOpen === 'boolean' && ['idle', 'moving'].includes(transport.phase), 'invalid transport state');
-        require(Array.isArray(transport.queue), 'transport needs a request queue');
-        require(transport.dwell === undefined || (Number.isInteger(transport.dwell) && transport.dwell >= 0), 'invalid transport dwell');
-        transport.queue.forEach(request => validateTransportRequest(request, transport));
-        if (transport.request) validateTransportRequest(transport.request, transport);
-        if (transport.phase === 'moving') require(transport.request && !transport.doorsOpen, 'moving transport needs a request and closed doors');
-    });
     definitions.forEach((item, id) => {
         const properties = item.properties || {};
-        if (properties.onMove !== undefined) {
-            const move = properties.onMove;
-            require(object(move) && Array.isArray(move.effects), `invalid movement effects on ${id}`);
-            for (const field of ['from', 'to']) {
-                if (move[field] !== undefined) require(Boolean(model.rooms[move[field]]), `unknown movement room on ${id}`);
-            }
-        }
+        require(properties.onMove === undefined, `use itemMoved event listeners on ${id}`);
         if (properties.textValue !== undefined) require(typeof properties.textValue === 'string', `invalid recorded text on ${id}`);
         if (properties.textInputTargets !== undefined) require(Array.isArray(properties.textInputTargets) && properties.textInputTargets.every(key => typeof key === 'string' && ids.has(key)), `invalid text input targets on ${id}`);
         if (properties.textInputLabel !== undefined) require(typeof properties.textInputLabel === 'string', `invalid text input label on ${id}`);
@@ -147,48 +121,33 @@ function validateWorld(model, referenceModel = model) {
                 require(ids.has(record.container) && (!definitions.has(record.container) || Boolean(definitions.get(record.container).properties?.container)), `unknown notebook on ${id}`);
             });
         }
+        require(properties.input?.accepted === undefined, `use submitInput rules on ${id}`);
         if (properties.input?.notesOnly !== undefined) require(typeof properties.input.notesOnly === 'boolean', `invalid notesOnly on ${id}`);
+        if (properties.timer?.event !== undefined) {
+            const timer = properties.timer;
+            require(typeof timer.event === 'string' && timer.event.trim().length > 0, `invalid timer event on ${id}`);
+            require(Number.isSafeInteger(timer.remaining) && timer.remaining >= 0 && typeof timer.justStarted === 'boolean', `invalid timer countdown on ${id}`);
+        }
     });
-    const conditionTypes = new Set(['hasItem', 'ownsItem', 'itemInContainer', 'itemInRoom', 'itemConnected', 'itemExists', 'currentRoom', 'roomVisited', 'clueExamined', 'itemState', 'elapsedTime', 'all', 'any', 'not', 'requirements']);
     function condition(value) {
-        require(object(value), 'condition must be an object');
-        if (typeof value.predicate === 'string') { require(scripts.has(value.predicate), `unknown predicate ${value.predicate}`); return; }
-        require(!value.type || conditionTypes.has(value.type), `unknown condition ${value.type}`);
-        if (value.item) require(ids.has(value.item), `unknown condition item ${value.item}`);
-        if (value.container) require(ids.has(value.container), `unknown container ${value.container}`);
-        if (value.target) require(ids.has(value.target), `unknown target ${value.target}`);
-        if (value.room) require(Boolean(model.rooms[value.room]), `unknown room ${value.room}`);
-        if (value.type === 'clueExamined') require(Boolean(model.rooms[value.room]?.clues?.[value.clue]), `unknown clue ${value.clue}`);
-        if (['all', 'any', 'requirements'].includes(value.type)) {
-            const children = value.type === 'requirements' ? value.requirements : value.conditions;
-            require(Array.isArray(children), `${value.type} needs an array`);
-            children.forEach(condition);
-        }
-        if (value.type === 'elapsedTime') {
-            for (const bound of ['min', 'max']) if (value[bound] !== undefined) require(Number.isFinite(value[bound]) && value[bound] >= 0, 'invalid time bound');
-            require(value.min === undefined || value.max === undefined || value.min <= value.max, 'reversed time bounds');
-        }
-        if (value.type === 'not') condition(value.condition);
+        require(object(value) && Object.keys(value).length === 1 && typeof value.predicate === 'string', 'delayed validity needs a named predicate');
+        require(predicates.has(value.predicate), `unknown predicate ${value.predicate}`);
     }
-    function effect(value) {
-        require(object(value) && typeof value.script === 'string', 'effect needs a registered script');
-        require(scripts.has(value.script), `unknown script ${value.script}`);
-    }
-    function walk(value) {
+    function walk(value, path = 'world') {
         if (!value || typeof value !== 'object') return;
-        if (Array.isArray(value)) { value.forEach(walk); return; }
+        if (Array.isArray(value)) { value.forEach((entry, index) => walk(entry, `${path}.${index}`)); return; }
         Object.entries(value).forEach(([key, child]) => {
-            if (['condition', 'visibleWhen', 'takeOutCondition', 'waitUntil', 'disabledWhen', 'repeatWhen'].includes(key) && child) condition(child);
+            if (['condition', 'visibleWhen', 'takeOutCondition', 'waitUntil', 'disabledWhen', 'repeatWhen'].includes(key) && child) {
+                require((key === 'condition' && typeof value.destination === 'string') || (key === 'waitUntil' && Number.isSafeInteger(value.remaining)), `use availability or before rules for immediate conditions at ${path}.${key}`);
+                condition(child);
+            }
             if (key === 'noteSources') require(Array.isArray(child) && child.every(id => ids.has(id)), 'unknown note source');
             if (key === 'messages') require(Array.isArray(child) && child.length > 0 && child.every(text => typeof text === 'string' && text.trim().length), 'messages must be a nonempty array of text');
-            if (key === 'effects') {
-                require(Array.isArray(child), 'effects must be an array');
-                child.forEach(effect);
-            }
-            walk(child);
+            require(!(['effects', 'stateRules', 'actions', 'conditions', 'requirements', 'script', 'callback', 'onTake', 'onPush', 'onPut'].includes(key) ||
+                (['action', 'onExamine'].includes(key) && object(child))), `register action rules or event listeners instead of executable records at ${path}.${key}`);
+            walk(child, `${path}.${key}`);
         });
     }
-    if (model.stateRules !== undefined) require(Array.isArray(model.stateRules) && model.stateRules.every(rule => object(rule) && object(rule.condition) && Array.isArray(rule.effects)), 'invalid state rules');
     definitions.forEach(item => {
         const npc = item.properties?.npc, config = npc?.missions;
         if (!config) return;
@@ -200,7 +159,7 @@ function validateWorld(model, referenceModel = model) {
             edges.forEach(edge => {
                 require(Boolean(model.rooms[edge.to]), 'invalid mission route destination');
                 if (edge.transport) {
-                    const transport = model.transports?.[edge.transport] ?? definitions.get(edge.transport)?.properties?.transport;
+                    const transport = model.transports?.[edge.transport];
                     require(Boolean(transport && transportStopAt(transport,from) !== undefined && transportStopAt(transport,edge.to) !== undefined), 'mission transport edge needs two stops');
                 } else require(Boolean(model.rooms[from].exits[edge.to]), 'mission route needs a physical exit');
             });
@@ -209,7 +168,13 @@ function validateWorld(model, referenceModel = model) {
             require(Boolean(model.rooms[destination.room]) && Boolean(config.routes[destination.room]), 'unknown mission destination');
             require(Number.isInteger(destination.searchTurns) && destination.searchTurns > 0, 'invalid mission search duration');
             if (destination.departureReply !== undefined) require(Array.isArray(destination.departureReply) && destination.departureReply.length > 0 && destination.departureReply.every(text => typeof text === 'string' && text.trim()), 'invalid mission departure reply');
-            if (destination.variants) require(Array.isArray(destination.variants) && destination.variants.every(variant => object(variant.condition) && Number.isInteger(variant.searchTurns) && variant.searchTurns > 0), 'invalid mission variant');
+            if (destination.variants) {
+                require(Array.isArray(destination.variants) && destination.variants.every(variant => object(variant) &&
+                    (typeof variant.id === 'string' && variant.id.trim()) &&
+                    Number.isInteger(variant.searchTurns) && variant.searchTurns > 0), 'invalid mission variant');
+                const names = destination.variants.filter(variant => variant.id !== undefined).map(variant => variant.id);
+                require(new Set(names).size === names.length, 'duplicate mission variant ID');
+            }
         });
         if (npc.completed) Object.entries(npc.completed).forEach(([key, value]) => require(Boolean(config.destinations[key]) && typeof value === 'boolean', 'invalid mission completion'));
         const mission = npc.mission;
@@ -217,7 +182,7 @@ function validateWorld(model, referenceModel = model) {
             require(Boolean(config.destinations[mission.destination]) && ['outbound', 'searching', 'returning'].includes(mission.phase), 'invalid active mission');
             if (mission.phase === 'searching') require(Number.isInteger(mission.remaining) && mission.remaining > 0, 'invalid search remaining');
             if (mission.ride) {
-                const ride = mission.ride, transport = model.transports?.[ride.edge?.transport] ?? definitions.get(ride.edge?.transport)?.properties?.transport;
+                const ride = mission.ride, transport = model.transports?.[ride.edge?.transport];
                 require(['waiting', 'ready', 'boarded', 'riding'].includes(ride.stage) && Boolean(transport && transportStopAt(transport,ride.origin) !== undefined && transportStopAt(transport,ride.edge.to) !== undefined), 'invalid mission ride');
             }
         }
@@ -244,8 +209,12 @@ function shouldUseSavedModel(savedModel, freshModel) {
 
 function commitMutation(advanceTime = true) {
     if (dispatching) {
-        pendingCommit = pendingCommit === null ? advanceTime : pendingCommit || advanceTime;
+        // A request owns one success/turn boundary. Consequences may call helpers
+        // that also commit, but must not advance the same request a second time.
+        if (pendingCommit !== null) { pendingCommit ||= advanceTime; return; }
+        pendingCommit = advanceTime;
         api._afterCommit?.();
+        advanceTime = pendingCommit;
     }
     if (gameModel?.player?.gameOver) {
         // An action effect may have ended play before reaching this commit.
@@ -272,11 +241,11 @@ function commitMutation(advanceTime = true) {
     if (advanceTime) {
         const roomKey = gameModel.player.currentRoom;
         const observations = gameModel.rooms[roomKey]?.observations || [];
-        const before = observations.map(entry => evaluateCondition(entry.condition));
+        const before = observations.map(entry => isRoomCueActive(roomKey, entry));
         api.schedule.advance();
         if (gameModel.player.currentRoom === roomKey) {
             gameModel.player.turnObservations.push(...observations
-                .filter((entry, index) => !before[index] && evaluateCondition(entry.condition))
+                .filter((entry, index) => !before[index] && isRoomCueActive(roomKey, entry))
                 .map(entry => ({ room: roomKey, text: buildConditionalText(entry.text) })));
         }
         updateTurnCues();
@@ -393,28 +362,20 @@ function clearPlayerPosture() {
 }
 
 function exitRequiresStandingOn(exitDefinition, itemKey) {
-    const requirements = exitDefinition?.condition?.requirements || [];
-    return requirements.some((requirement) => {
-        return requirement.item === itemKey && requirement.state === 'climbable.climbed';
-    });
+    return exitDefinition?.standingOn === itemKey;
 }
 
-// Modify the movePlayer function to save the game model after movement
-
-function movePlayer(exitKey) {
-    if (gameModel.player.gameOver) {
-        return;
-    }
-
+function canMovePlayer(exitKey) {
+    if (gameModel.player.gameOver) return false;
     const currentRoom = gameModel.rooms[gameModel.player.currentRoom];
     const roomName = gameModel.rooms[exitKey]?.name || exitKey;
-    if (!currentRoom?.exits?.[exitKey] || !gameModel.rooms[exitKey]) return;
+    if (!currentRoom?.exits?.[exitKey] || !gameModel.rooms[exitKey]) return false;
     const exitDefinition = normalizeExitDefinition(currentRoom.exits[exitKey], roomName);
     const standingOnItemKey = getStandingOnItemKey();
 
-    if (!isExitVisible(exitDefinition)) {
+    if (!isExitVisible(exitDefinition, gameModel.player.currentRoom, exitKey)) {
         console.log("You can't go that way.");
-        return;
+        return false;
     }
 
     if (standingOnItemKey && !exitRequiresStandingOn(exitDefinition, standingOnItemKey)) {
@@ -422,8 +383,22 @@ function movePlayer(exitKey) {
         const message = buildConditionalText(item.properties?.climbable?.movementBlockedMessage) ||
             `You need to climb down from ${getProseItemName(item)} before moving elsewhere.`;
         displayMessageModal(message, 'Climb Down First');
-        return;
+        return false;
     }
+
+    if (exitDefinition.standingOn && standingOnItemKey !== exitDefinition.standingOn &&
+        findItemInGameModel(exitDefinition.standingOn)?.properties?.climbable?.climbed !== true) {
+        const item = findItemInGameModel(exitDefinition.standingOn);
+        displayMessageModal(`You need to climb onto ${getProseItemName(item)} first.`, 'Path Blocked');
+        return false;
+    }
+    return true;
+}
+
+function movePlayer(exitKey) {
+    if (!canMovePlayer(exitKey)) return;
+    const exitDefinition = normalizeExitDefinition(gameModel.rooms[gameModel.player.currentRoom].exits[exitKey], gameModel.rooms[exitKey].name);
+    const standingOnItemKey = getStandingOnItemKey();
 
     const blockedMessage = getExitBlockedMessage(exitDefinition);
     if (blockedMessage) {
@@ -432,7 +407,7 @@ function movePlayer(exitKey) {
     }
 
     const beforeMove = exitDefinition.beforeMove;
-    if (beforeMove && (!beforeMove.condition || evaluateCondition(beforeMove.condition))) {
+    if (beforeMove) {
         const message = buildConditionalText(beforeMove.message);
         if (message) {
             gameModel.player.pendingAction = { type: 'completeMove', exitKey, exitDefinition: cloneModel(exitDefinition), standingOnItemKey, reportSuccess: true, message, title: beforeMove.title || 'Before Moving' };
@@ -458,6 +433,7 @@ function movePlayer(exitKey) {
 }
 
 function completeMovePlayer(exitKey, exitDefinition, standingOnItemKey = null) {
+    const from = gameModel.player.currentRoom;
     clearPlayerConnectableState();
     gameModel.player.currentRoom = exitKey;
     recordRoomVisit(exitKey);
@@ -465,8 +441,7 @@ function completeMovePlayer(exitKey, exitDefinition, standingOnItemKey = null) {
     if (standingOnItemKey) {
         clearPlayerPosture();
     }
-    (exitDefinition.effects || []).forEach(performEffect);
-    api.events.emit('playerEnteredRoom', { room: exitKey });
+    api.events.emit('playerEnteredRoom', { room: exitKey, from });
     commitMutation();
 }
 
@@ -489,16 +464,21 @@ function getRoomDescriptionParts(roomKey) {
 }
 
 function getRoomNoticeTexts(roomKey) {
+    const cues = gameModel.rooms[roomKey]?.cues;
     return [
         ...(gameModel.player.turnObservations || []).filter(entry => entry.room === roomKey).map(entry => entry.text),
-        buildConditionalText(gameModel.rooms[roomKey]?.cues, true)
+        buildConditionalText(Array.isArray(cues) ? cues.filter(entry => isRoomCueActive(roomKey, entry)) : cues, true)
     ].filter(Boolean);
+}
+
+function isRoomCueActive(roomKey, entry) {
+    return (!entry?.id || api.isAvailable({type: 'cue', target: roomKey, option: entry.id}));
 }
 
 function getNpcCueTexts(roomKey) {
     const local = getRoomNoticeTexts(roomKey).join(" ");
     const transmissions = (gameModel.player.movementCues || [])
-        .filter(cue => !cue.condition || evaluateCondition(cue.condition))
+        .filter(cue => api.isAvailable({type: 'npcCue', target: cue.source, option: cue.kind || 'turn'}))
         .map(cue => cue.text);
     return [local, ...transmissions, ...getNearbyNpcDescriptionTexts(roomKey)].filter(Boolean);
 }
@@ -510,13 +490,13 @@ function recordNpcMovementCue(itemKey, item, fromRoom, toRoom) {
     }
     const cue = item.properties?.npc?.movementCue;
     if (!cue || !fromRoom || !toRoom || fromRoom === toRoom ||
-        (cue.condition && !evaluateCondition(cue.condition))) return;
-    const variant = (cue.variants || []).find(entry => !entry.condition || evaluateCondition(entry.condition));
-    const text = variant ? chooseVariedText(variant.texts, cue.lastText) : buildConditionalText(cue.description);
+        !api.isAvailable({type: 'npcCue', target: itemKey, option: 'movement'})) return;
+    const variant = (cue.variants || []).find(entry => api.isAvailable({type: 'npcCueVariant', target: itemKey, field: 'movement', option: entry.id}));
+    const text = variant ? chooseVariedText(variant.texts, cue.lastText) : buildConditionalText(cue.description, false, {target: itemKey, field: 'movement'});
     if (variant && text) cue.lastText = text;
     if (!text) return;
     gameModel.player.movementCues ||= [];
-    gameModel.player.movementCues.push({ source: itemKey, text, condition: cloneModel(cue.condition || null), fresh: true });
+    gameModel.player.movementCues.push({ source: itemKey, text, kind: 'movement', fresh: true });
 }
 
 function chooseVariedText(texts, previous) {
@@ -538,19 +518,20 @@ function updateTurnCues() {
             npc.ambientCountdown = (npc.ambientCountdown ?? 2) - 1;
             if (npc.ambientCountdown <= 0) {
                 npc.ambientCountdown = 2 + Math.floor(random() * 2);
-                if (!reports.some(report => report.source === key) && (!cue.condition || evaluateCondition(cue.condition))) {
+                if (!reports.some(report => report.source === key) &&
+                    api.isAvailable({type: 'npcCue', target: key, option: 'turn'})) {
                     const texts = npc.missions.sounds?.[findItem(key).owner.key] || [];
                     const text = chooseVariedText(texts, npc.lastTurnCue);
-                    if (text) { npc.lastTurnCue = text; reports.push({ source: key, text, condition: cloneModel(cue.condition || null) }); }
+                    if (text) { npc.lastTurnCue = text; reports.push({ source: key, text, kind: 'turn' }); }
                 }
             }
             return;
         }
-        const variantIndex = (cue.variants || []).findIndex(entry => !entry.condition || evaluateCondition(entry.condition));
+        const variantIndex = (cue.variants || []).findIndex(entry =>     api.isAvailable({type: 'npcCueVariant', target: key, field: 'turn', option: entry.id}));
         const repeated = npc.lastTurnCueVariant === variantIndex;
         npc.lastTurnCueVariant = variantIndex;
         if (reports.some(report => report.source === key) ||
-            (cue.condition && !evaluateCondition(cue.condition))) return;
+                !api.isAvailable({type: 'npcCue', target: key, option: 'turn'})) return;
         const variant = cue.variants?.[variantIndex];
         if (cue.intermittent && repeated) {
             npc.ambientCountdown = (npc.ambientCountdown ?? 2) - 1;
@@ -562,7 +543,7 @@ function updateTurnCues() {
         if (!texts.length) return;
         const text = chooseVariedText(texts, npc.lastTurnCue);
         npc.lastTurnCue = text;
-        reports.push({ source: key, text, condition: cloneModel(cue.condition || null) });
+        reports.push({ source: key, text, kind: 'turn' });
     });
     gameModel.player.movementCues = reports.map(cue => ({ ...cue, fresh: false }));
 }
@@ -594,7 +575,7 @@ function getAdjacentRoomKeys(roomKey) {
 
     Object.entries(currentRoom?.exits || {}).forEach(([exitKey, exitDefinition]) => {
         const normalizedExit = normalizeExitDefinition(exitDefinition, gameModel.rooms?.[exitKey]?.name || exitKey);
-        if (isExitTraversableForNpcCue(normalizedExit)) {
+        if (isExitTraversableForNpcCue(normalizedExit, roomKey, exitKey)) {
             adjacentRoomKeys.add(exitKey);
         }
     });
@@ -610,7 +591,7 @@ function getAdjacentRoomKeys(roomKey) {
         }
 
         const normalizedExit = normalizeExitDefinition(reverseExit, gameModel.rooms?.[roomKey]?.name || roomKey);
-        if (isExitTraversableForNpcCue(normalizedExit)) {
+        if (isExitTraversableForNpcCue(normalizedExit, candidateRoomKey, roomKey)) {
             adjacentRoomKeys.add(candidateRoomKey);
         }
     });
@@ -618,11 +599,12 @@ function getAdjacentRoomKeys(roomKey) {
     return [...adjacentRoomKeys];
 }
 
-function isExitTraversableForNpcCue(exitDefinition) {
-    return isExitVisible(exitDefinition) && !getExitBlockedMessage(exitDefinition);
+function isExitTraversableForNpcCue(exitDefinition, from, target) {
+    return isExitVisible(exitDefinition, from, target) && !getExitBlockedMessage(exitDefinition) &&
+        api.isAvailable({type: 'go', from, target});
 }
 
-function buildConditionalText(description, separateSentences = false) {
+function buildConditionalText(description, separateSentences = false, query) {
     if (typeof description === 'string') {
         return description;
     }
@@ -637,7 +619,8 @@ function buildConditionalText(description, separateSentences = false) {
                 return true;
             }
 
-            return evaluateCondition(segment.condition);
+            return (!query || !segment.id ||
+                api.isAvailable({ type: 'text', ...query, option: segment.id }));
         })
         .map((segment) => typeof segment === 'string' ? segment : segment.text)
         .reduce((text, part) => text + (separateSentences && /[.!?][”’"]?$/.test(text) && /^(?:\*\*|\[\[)?[A-Z]/.test(part) ? ' ' : '') + part, '');
@@ -714,59 +697,12 @@ function examineClue(clue) {
     }
 
     const description = descriptions.clue(clue);
-    const result = runClueOnExamine(clue);
-    const revealMessages = result.messages;
-    commitMutation(result.ran && clue.onExamine?.consumesTurn === true);
+    const response = { description,
+        title: clue.title || clue.name || 'Examine', scenery: gameModel.rooms[gameModel.player.currentRoom]?.clues || {} };
+    if (api._actionContext) api._actionContext.response = response;
+    commitMutation(false);
     if (gameModel.player.gameOver) return;
-    displayMessageModal([description, ...revealMessages].filter(Boolean).join(' '), clue.title || clue.name || 'Examine', gameModel.rooms[gameModel.player.currentRoom]?.clues || {});
-}
-
-function runClueOnExamine(clue) {
-    const onExamine = clue?.onExamine;
-
-    if (!onExamine) {
-        return { messages: [], changed: false, ran: false };
-    }
-
-    if (onExamine.once && onExamine.examined) {
-        return { messages: [], changed: false, ran: false };
-    }
-
-    if (onExamine.condition && !evaluateCondition(onExamine.condition)) {
-        return { messages: [], changed: false, ran: false };
-    }
-
-    const before = JSON.stringify(gameModel);
-    const resultMessages = [];
-
-    (onExamine.effects || []).forEach((effect) => {
-        performEffect(effect);
-        if (effect.type === 'setItemState') {
-            const resultMessage = getClueEffectResultMessage(effect);
-            if (resultMessage) {
-                resultMessages.push(resultMessage);
-            }
-        }
-    });
-
-    const changed = JSON.stringify(gameModel) !== before;
-    onExamine.examined = true;
-    return { messages: resultMessages, changed, ran: true };
-}
-
-function getClueEffectResultMessage(effect) {
-    if (typeof effect.message === 'string') {
-        return effect.message;
-    }
-
-    if (effect.attribute === 'properties.hidden' && effect.value === false) {
-        const revealedItem = findItemInGameModel(effect.item);
-        if (revealedItem?.name) {
-            return `You uncover ${getItemReferenceText(effect.item, revealedItem)}.`;
-        }
-    }
-
-    return '';
+    displayMessageModal(response.description, response.title, response.scenery);
 }
 
 function startGame() {
@@ -826,7 +762,8 @@ function getTotalAchievementCount() {
 }
 
 function getRoomImage(room) {
-    const variant = (room.imageVariants || []).find(entry => !entry.condition || evaluateCondition(entry.condition));
+    const roomKey = Object.entries(gameModel.rooms).find(([, value]) => value === room)?.[0];
+    const variant = (room.imageVariants || []).find(entry => api.isAvailable({type: 'image', target: roomKey, option: entry.id}));
     return { imageUrl: variant?.imageUrl || room.imageUrl, imagePosition: variant?.imagePosition || room.imagePosition };
 }
 
@@ -878,12 +815,19 @@ function normalizeExitDefinition(exitDefinition, roomName) {
     return exitDefinition;
 }
 
-function getActiveExitVariant(exitDefinition) {
+function exitLocation(exitDefinition) {
+    for (const [from, room] of Object.entries(gameModel.rooms)) {
+        for (const [to, exit] of Object.entries(room.exits || {})) if (exit === exitDefinition) return {from, to};
+    }
+    return null;
+}
+
+function getActiveExitVariant(exitDefinition, location = exitLocation(exitDefinition)) {
     if (!exitDefinition || typeof exitDefinition !== 'object' || !Array.isArray(exitDefinition.variants)) {
         return null;
     }
 
-    return exitDefinition.variants.find((variant) => evaluateCondition(variant.condition)) || null;
+    return exitDefinition.variants.find(variant => (!variant.id || !location || api.isAvailable({type: 'exitVariant', target: location.from, secondaryTarget: location.to, option: variant.id}))) || null;
 }
 
 function deriveExitParts(exitText, roomName) {
@@ -920,13 +864,12 @@ function deriveExitParts(exitText, roomName) {
 
 function getExitDisplayDefinition(exitDefinition, roomName) {
     const normalized = normalizeExitDefinition(exitDefinition, roomName) ?? {};
-    const activeVariant = getActiveExitVariant(normalized);
+    const activeVariant = getActiveExitVariant(normalized, exitLocation(exitDefinition));
 
     if (activeVariant) {
         return {
             ...normalized,
             ...normalizeExitDefinition(activeVariant, roomName),
-            condition: normalized.condition,
             variants: normalized.variants
         };
     }
@@ -940,10 +883,14 @@ function getExitDisplayDefinition(exitDefinition, roomName) {
     return normalized;
 }
 
-function isExitVisible(exitDefinition) {
+function isExitVisible(exitDefinition, from, destination) {
+    const location = exitLocation(exitDefinition);
+    from ??= location?.from || gameModel.player.currentRoom;
+    destination ??= location?.to;
     const link = exitDefinition?.transport;
-    if (link && gameModel.player.currentRoom === gameModel.transports?.[link.id]?.space.room && !worldEvents.transportConnectionOpen(link)) return false;
-    return !exitDefinition?.visibleWhen || evaluateCondition(exitDefinition.visibleWhen);
+    if (link && from === gameModel.transports?.[link.id]?.space.room && !worldEvents.transportConnectionOpen(link)) return false;
+    destination ??= Object.entries(gameModel.rooms[from]?.exits || {}).find(([,exit]) => exit === exitDefinition)?.[0];
+    return !destination || api.isAvailable({type: 'exit', target: from, option: destination});
 }
 
 function buildExitText(exitKey, exitDefinition) {
@@ -969,45 +916,16 @@ function getItemPropertyValue(item, propertyPath) {
 }
 
 function getExitBlockedMessage(exitDefinition) {
-    const configured = getConfiguredExitBlockedMessage(exitDefinition);
-    if (configured) return configured;
+    const doorItem = findItemInGameModel(exitDefinition?.door);
+    const door = doorItem?.properties?.door;
+    if (door?.locked) return buildConditionalText(door.lockedMessage) || `${capitalizeFirstLetter(getProseItemName(doorItem))} is locked.`;
+    if (door?.openable && !door.opened) return `${capitalizeFirstLetter(getProseItemName(doorItem))} is closed.`;
     const link = exitDefinition?.transport;
     if (link && !worldEvents.transportConnectionOpen(link))
         return gameModel.transports?.[link.id]?.blockedMessage || 'You cannot board or leave the transport here yet.';
     return null;
 }
 
-function getConfiguredExitBlockedMessage(exitDefinition) {
-    if (!exitDefinition?.condition) {
-        return null;
-    }
-
-    const condition = exitDefinition.condition;
-
-    if (condition.type === 'requirements') {
-        const requirements = Array.isArray(condition.requirements) ? condition.requirements : [];
-        const unmetRequirements = requirements.filter((requirement) => {
-            const item = findItemInGameModel(requirement.item);
-            const currentValue = getItemPropertyValue(item, requirement.state);
-            const expectedValue = Object.prototype.hasOwnProperty.call(requirement, 'value') ? requirement.value : true;
-            return currentValue !== expectedValue;
-        });
-
-        if (unmetRequirements.length === 1) {
-            return unmetRequirements[0].message ?? condition.message;
-        }
-
-        if (unmetRequirements.length > 1) {
-            return condition.message ?? unmetRequirements[0]?.message;
-        }
-    }
-
-    if (evaluateCondition(condition)) {
-        return condition.message;
-    }
-
-    return null;
-}
 
 function capitalizeFirstLetter(text) {
     if (!text) {
@@ -1249,23 +1167,14 @@ function examineItem(itemKey, isPlayerItem = false) {
         fullDescription += ' ' + item.detail;
     }
 
-    const onExamine = item.properties?.onExamine;
-    const acted = onExamine && performAction(onExamine);
-    if (acted) {
-        const discoveries = (onExamine.effects || [])
-            .filter(effect => effect.type === 'setItemState' && effect.attribute === 'properties.hidden' && effect.value === false)
-            .filter(effect => { const revealed = findItemInGameModel(effect.item); return revealed && !isHiddenItem(revealed); })
-            .map(getClueEffectResultMessage).filter(Boolean);
-        if (discoveries.length) fullDescription += ' ' + discoveries.join(' ');
-    }
-
-    commitMutation(Boolean(acted && onExamine.consumesTurn === true));
-
-    return {
+    const response = {
         item,
         description: fullDescription,
         isPlayerItem: actualIsPlayerItem
     };
+    if (api._actionContext) api._actionContext.response = response;
+    commitMutation(false);
+    return response;
 }
 
 // Reading is a deliberate action, independent of carrying the document.
@@ -1274,8 +1183,7 @@ function readItem(itemKey) {
     const location = findItem(itemKey);
     const readable = location?.item.properties?.readable;
     if (!readable || !canActOnItem(itemKey, true) || location.accessible === false || isHiddenItem(location.item)) return;
-    const text = buildConditionalText(readable.text, true);
-    if (readable.action) performAction(readable.action);
+    const text = buildConditionalText(readable.text, true, {target: itemKey, field: 'read'});
     commitMutation();
     if (!gameModel.player.gameOver) displayMessageModal(text, location.item.name, null, readable.noteSources || []);
 }
@@ -1423,6 +1331,10 @@ function getIndefiniteArticle(text) {
 }
 
 function getAvailableActions(itemKey) {
+    return getStandardAvailableActions(itemKey).filter(action => !api.isAvailable || api.isAvailable({type: action.id, target: itemKey}));
+}
+
+function getStandardAvailableActions(itemKey) {
     const itemLocation = findItem(itemKey);
     const item = itemLocation?.item;
 
@@ -1450,7 +1362,7 @@ function getAvailableActions(itemKey) {
         actions.push({ id: 'take', label: 'Take' });
     }
 
-    if (isNestedInContainer && properties.portable && !properties.fixed && (!properties.takeOutCondition || evaluateCondition(properties.takeOutCondition))) {
+    if (isNestedInContainer && properties.portable && !properties.fixed) {
         const holder = findItemInGameModel(itemLocation.owner.key)?.properties?.container;
         actions.push({ id: 'take out', label: holder?.takeLabel || (holder?.supporter ? 'Take' : 'Take Out') });
     }
@@ -1486,7 +1398,8 @@ function getAvailableActions(itemKey) {
         const container = properties.container;
         const hasKey = !container.key || hasAccessiblePlayerItem(container.key);
 
-        if (container.lockable && container.locked && !container.key) {
+        if (container.lockable && container.locked && !container.key &&
+            (!api.isAvailable || api.isAvailable({type: 'unlock', target: itemKey}))) {
             actions.push({ id: 'unlock', label: 'Unlock' });
         } else {
             if (container.openable) {
@@ -1505,7 +1418,8 @@ function getAvailableActions(itemKey) {
         const door = properties.door;
         const hasKey = !door.key || hasAccessiblePlayerItem(door.key);
 
-        if (door.lockable && door.locked && !door.key) {
+        if (door.lockable && door.locked && !door.key &&
+            (!api.isAvailable || api.isAvailable({type: 'unlock', target: itemKey}))) {
             actions.push({ id: 'unlock', label: 'Unlock' });
         } else {
             if (door.openable && !door.locked) {
@@ -1542,12 +1456,12 @@ function getAvailableActions(itemKey) {
         });
     }
 
-    if (properties.input && !properties.input.notesOnly && (!properties.input.condition || evaluateCondition(properties.input.condition))) {
+    if (properties.input && !properties.input.notesOnly) {
         actions.push({ id: 'input', label: properties.input.label || 'Enter Input' });
     }
 
     (properties.choices || []).forEach((choice, index) => {
-        if (!choice.condition || evaluateCondition(choice.condition)) {
+        {
             actions.push({
                 id: `choice:${index}`,
                 label: choice.label || 'Choose'
@@ -1599,8 +1513,7 @@ function getAvailableActions(itemKey) {
     if (!isPlayerOwned &&
         properties.pushable &&
         !properties.pushable.pushed &&
-        !isStandingOnItem(itemKey) &&
-        (!properties.pushable.condition || evaluateCondition(properties.pushable.condition))) {
+        !isStandingOnItem(itemKey)) {
         actions.push({ id: 'push', label: 'Push' });
     }
 
@@ -1657,7 +1570,7 @@ function getTextInputTargets(noteKey) {
         item => Boolean(item.properties?.input), targets);
     const allowedTargets = note.item.properties.textInputTargets;
     return targets.filter(({key, item}) => (!allowedTargets || allowedTargets.includes(key)) && canActOnItem(key) && !isHiddenItem(item) && findItem(key)?.accessible !== false &&
-        (!item.properties.input.condition || evaluateCondition(item.properties.input.condition)));
+        (!api.isAvailable || api.isAvailable({type:'submitInput',target:key,value:note.item.properties.textValue})));
 }
 
 function getRecordedTextActions(noteKey) {
@@ -1678,7 +1591,8 @@ function canRecordNote(sourceKey, index = 0) {
     if (!record || !canActOnItem(sourceKey) || source.accessible === false || isHiddenItem(source.item)) return false;
     const notebook = findItem(record.container);
     return Boolean(notebook && isPlayerOwnedLocation(notebook) && canActOnItem(record.container) && notebook.accessible !== false && notebook.item.properties?.container?.opened &&
-        gameModel.items?.[record.entry] && !findItem(record.entry) && (!record.condition || evaluateCondition(record.condition)));
+        gameModel.items?.[record.entry] && !findItem(record.entry) &&
+        api.isAvailable({type: 'record', target: sourceKey, index}));
 }
 
 function getRecordButtonLabel(record, fallback = '') {
@@ -1697,7 +1611,6 @@ function getMessageNoteActions(sourceKeys = []) {
 
 function recordNote(...args) { return actions.recordNote(...args); }
 
-function inputValueMatches(...args) { return actions.inputValueMatches(...args); }
 
 function chooseToolAction(...args) { return actions.chooseToolAction(...args); }
 
@@ -1713,7 +1626,6 @@ function takeOutItem(...args) { return actions.takeOutItem(...args); }
 
 function putItemInContainer(...args) { return actions.putItemInContainer(...args); }
 
-function performContainerPutAction(...args) { return actions.performContainerPutAction(...args); }
 
 function wearItem(...args) { return actions.wearItem(...args); }
 
@@ -1810,9 +1722,6 @@ function getConnectionTargets(itemKey) {
             return;
         }
 
-        if (connection.condition && !evaluateCondition(connection.condition)) {
-            return;
-        }
 
         targets.push({ key: targetKey, item: targetItem, connection });
     });
@@ -1884,12 +1793,12 @@ function collectToolActions(toolKey, toolDefinition, items, isAccessible, action
         const cuttable = targetItem.properties?.cuttable;
 
         if (canActOnItem(targetKey) && toolCanUseCuttable(toolKey, toolDefinition, cuttable)) {
-            (cuttable.actions || []).forEach((cutAction) => {
-                if (!cutAction.condition || evaluateCondition(cutAction.condition)) {
+            (cuttable.options || []).forEach((cutAction) => {
+                if ((!api.isAvailable || api.isAvailable({type:'tool',target:toolKey,secondaryTarget:targetKey,option:cutAction.id}))) {
                     actions.push({
+                        ...(cutAction.id ? {id: cutAction.id} : {}),
                         label: cutAction.label || `Cut ${targetItem.name}`,
-                        target: targetKey,
-                        action: cutAction.action || {}
+                        target: targetKey
                     });
                 }
             });
@@ -1936,7 +1845,8 @@ function collectInsertionTargets(itemKey, items, isAccessible, targets) {
         const container = item.properties?.container;
 
         const insertion = container?.insertable?.[itemKey];
-        if (canActOnItem(key) && insertion && (!insertion.action?.condition || evaluateCondition(insertion.action.condition))) {
+        if (canActOnItem(key) && insertion &&
+            (!api.isAvailable || api.isAvailable({type:'useOn',target:itemKey,secondaryTarget:key}))) {
             targets.push({ key, item });
         }
 
@@ -1998,23 +1908,15 @@ function isPathPrefix(parentPath, childPath) {
     return parentPath.every((pathPart, index) => childPath[index] === pathPart);
 }
 
-function selectConditionalAction(...args) { return actions.selectConditionalAction(...args); }
 
-function performAction(...args) { return actions.performAction(...args); }
-
-function performEffect(effect) {
-    if (!effect) return;
-    const script = scripts.get(effect.script);
-    if (!script) throw new Error(`Unknown game script: ${effect.script}`);
-    script(api.context());
-}
 
 function getItemChoiceOptions(itemKey, choiceIndex) {
     const choice = findItemInGameModel(itemKey)?.properties?.choices?.[choiceIndex];
-    if (!canActOnItem(itemKey) || !choice || (choice.condition && !evaluateCondition(choice.condition))) return [];
+    if (!canActOnItem(itemKey) || !choice ||
+        (api.isAvailable && !api.isAvailable({type:'choose',target:itemKey,index:choiceIndex}))) return [];
     return (choice.options || []).map((option, index) => ({ ...option, index,
-        disabled: Boolean(option.disabledWhen && evaluateCondition(option.disabledWhen))
-    })).filter(option => !option.condition || evaluateCondition(option.condition));
+        disabled: option.disabled === true
+    })).filter(option => (!api.isAvailable || api.isAvailable({type:'chooseOption',target:itemKey,choiceIndex,optionIndex:option.index})));
 }
 
 function chooseItemOption(...args) { return actions.chooseItemOption(...args); }
@@ -2174,86 +2076,15 @@ function performUpdateAction(updateAction) {
     if (attributeReference && typeof attributeReference === 'object') attributeReference[attributeName] = updateAction.newValue;
 }
 
-function evaluateCondition(condition) {
-    if (!condition) {
-        return true;
-    }
-
-    if (condition.predicate) {
-        const predicate = scripts.get(condition.predicate);
-        if (!predicate) throw new Error(`Unknown predicate: ${condition.predicate}`);
-        return predicate(api.context());
-    }
-
-    if (condition.type === 'ownsItem') {
-        return Boolean(isPlayerOwnedLocation(findItem(condition.item))) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'hasItem') {
-        const itemLocation = findItem(condition.item);
-        return Boolean(isDirectlyCarriedLocation(itemLocation)) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'itemInContainer') {
-        const itemLocation = findItem(condition.item);
-        return Boolean(itemLocation?.owner?.type === 'container' && itemLocation.owner.key === condition.container) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'itemInRoom') {
-        const itemLocation = findItem(condition.item);
-        return Boolean(itemLocation?.owner?.type === 'room' && itemLocation.owner.key === condition.room) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'itemConnected') {
-        const item = findItemInGameModel(condition.item);
-        const isConnected = Boolean(item?.properties?.connectable?.targets?.[condition.target]?.connected);
-        return isConnected === (condition.value ?? true);
-    }
-
-    if (condition.type === 'itemExists') {
-        return Boolean(findItem(condition.item)) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'currentRoom') {
-        return gameModel.player.currentRoom === condition.room;
-    }
-
-    if (condition.type === 'roomVisited') {
-        return Boolean(gameModel.player.visitedRooms?.[condition.room]) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'clueExamined') {
-        const clue = getRoomClue(condition.room, condition.clue);
-        return Boolean(clue?.examined || clue?.onExamine?.examined) === (condition.value ?? true);
-    }
-
-    if (condition.type === 'elapsedTime') {
-        const minutes = gameModel.player.elapsedMinutes;
-        return gameModel.player.timedRunEligible !== false && Number.isFinite(minutes) &&
-            (condition.min === undefined || minutes >= condition.min) &&
-            (condition.max === undefined || minutes <= condition.max);
-    }
-
-    if (condition.type === 'itemState' || !condition.type) {
-        const item = findItemInGameModel(condition.item);
-        const stateValue = getItemPropertyValue(item, condition.state);
-        const expectedValue = Object.prototype.hasOwnProperty.call(condition, 'value') ? condition.value : true;
-        return stateValue === expectedValue;
-    }
-
-    if (condition.type === 'all') {
-        return (condition.conditions || []).every(evaluateCondition);
-    }
-
-    if (condition.type === 'any') {
-        return (condition.conditions || []).some(evaluateCondition);
-    }
-
-    if (condition.type === 'not') {
-        return !evaluateCondition(condition.condition);
-    }
-
-    return false;
+function testPredicate(reference) {
+    if (reference == null) return true;
+    if (typeof reference !== 'object' || Array.isArray(reference) || Object.keys(reference).length !== 1 || typeof reference.predicate !== 'string')
+        throw new TypeError('Delayed validity needs a named predicate');
+    const handler = predicates.get(reference.predicate);
+    if (!handler) throw new Error(`Unknown predicate: ${reference.predicate}`);
+    const result = handler(api.context());
+    if (typeof result !== 'boolean') throw new TypeError(`Predicate ${reference.predicate} must return a boolean`);
+    return result;
 }
 
 function getRoomClue(roomKey, clueKey) {
@@ -2262,19 +2093,34 @@ function getRoomClue(roomKey, clueKey) {
 
 function checkEndings() { api.events.emit('checkEndings'); }
 
+function getEndingText(ending = getCurrentEnding()) {
+    const text = ending?.text || '';
+    return (Array.isArray(text) ? text : [text]).map(paragraph =>
+        buildConditionalText(paragraph, false, {target: ending?.id, field: 'ending'})).filter(Boolean);
+}
+
 function endGame(ending) {
-    (ending.effects || []).forEach(performEffect);
     gameModel.player.gameOver = true;
     gameModel.player.ending = ending.id || null;
-    const encounterDescription = buildConditionalText(ending.encounter?.description, true);
+    const encounterDescription = buildConditionalText(ending.encounter?.description, true,
+        {target: ending.id, field: 'encounter'});
     const observations = (gameModel.player.turnObservations || [])
         .filter(entry => entry.room === gameModel.player.currentRoom).map(entry => entry.text);
     const encounterText = encounterDescription ? [...observations, encounterDescription].join('\n\n') : '';
     if (encounterText) gameModel.player.endingEncounter = { text: encounterText, acknowledged: false };
     else delete gameModel.player.endingEncounter;
+    api.events.emit('gameEnded', {ending: gameModel.player.ending});
 }
 
 function pushItem(...args) { return actions.pushItem(...args); }
+
+function canPushOrPull(verb) {
+    const support = getStandingOnItemKey();
+    if (!support) return true;
+    const name = getProseItemName(findItemInGameModel(support));
+    displayMessageModal(`You need to climb down from ${name} before ${verb === 'push' ? 'pushing' : 'pulling'} anything.`, 'Climb Down First');
+    return false;
+}
 
 function pullItem(...args) { return actions.pullItem(...args); }
 
@@ -2291,25 +2137,27 @@ function finishMission(...args) { return worldEvents.finishMission(...args); }
 function advanceMissionTransport(...args) { return worldEvents.advanceMissionTransport(...args); }
 function advanceMissions(...args) { return worldEvents.advanceMissions(...args); }
 function requestTransport(...args) { return worldEvents.requestTransport(...args); }
-function recordTransportNotice(...args) { return worldEvents.recordTransportNotice(...args); }
 function holdTransportForBoarding(...args) { return worldEvents.holdTransportForBoarding(...args); }
 function advanceTransports(...args) { return worldEvents.advanceTransports(...args); }
 function startTimer(...args) { return worldEvents.startTimer(...args); }
 function advanceTimers(...args) { return worldEvents.advanceTimers(...args); }
 
 const api = {
+    canMovePlayer,
+    canPushOrPull,
     output, displayMessageModal, showItemChoiceOptions,
     getTransport(id) { return worldEvents.getTransport(id); },
     get state() { return gameModel; },
     world: cloneModel(world), messages: [],
     setHooks(value) { hooks = { ...hooks, ...value }; },
-    registerScript(id, handler) { if (typeof id !== 'string' || !id.trim() || typeof handler !== 'function' || handler.constructor.name === 'AsyncFunction') throw new TypeError('Scripts require an ID and synchronous handler'); if (scripts.has(id)) throw new Error(`Duplicate script: ${id}`); scripts.set(id, handler); },
+    registerPredicate(id, handler) { if (typeof id !== 'string' || !id.trim() || typeof handler !== 'function' || handler.constructor.name === 'AsyncFunction') throw new TypeError('Predicates require an ID and synchronous handler'); if (predicates.has(id)) throw new Error(`Duplicate predicate: ${id}`); predicates.set(id, handler); },
     save() { const saved = cloneModel(gameModel); saved.runtime = { randomSeed: options.seed ?? 123456789, ...saved.runtime, saveFormatVersion: 1, worldSchemaVersion: 1 }; return saved; },
     load(saved) { const next = cloneModel(saved);
         if ((next.id || next.title) !== (world.id || world.title)) throw new Error('Save belongs to a different game');
         validateWorld(next, api.initialState || world); gameModel = next; normalizePlayerState(); return api; },
     context(action = {}) { return {
-        action, actor: action.actor || 'player', target: findItemInGameModel(action.target) || gameModel.rooms[action.target],
+        action, actor: action.actor || 'player', target: findItemInGameModel(action.target) || gameModel.rooms[action.target] ||
+            (action.type === 'examineClue' && typeof action.target === 'string' ? getRoomClue(...action.target.split(':')) : undefined),
         secondaryTarget: findItemInGameModel(action.secondaryTarget), room: gameModel.rooms[gameModel.player.currentRoom],
         world: api.world, state: gameModel, game: api,
         say: displayMessageModal,
@@ -2367,11 +2215,14 @@ const api = {
     getExamineLinkTarget,
     showClueModal,
     examineClue,
-    runClueOnExamine,
-    getClueEffectResultMessage,
+    getDiscoveryMessage(itemKey) {
+        const item = findItemInGameModel(itemKey);
+        return item ? `You uncover ${getItemReferenceText(itemKey, item)}.` : '';
+    },
     startGame,
     acknowledgeEndingEncounter,
     getCurrentEnding,
+    getEndingText,
     awardAchievement,
     getEarnedAchievements,
     getTotalAchievementCount,
@@ -2430,7 +2281,6 @@ const api = {
     getRecordButtonLabel,
     getMessageNoteActions,
     recordNote,
-    inputValueMatches,
     chooseToolAction,
     eatItem,
     dropItem,
@@ -2438,7 +2288,6 @@ const api = {
     movePlayerItemToCollection,
     takeOutItem,
     putItemInContainer,
-    performContainerPutAction,
     wearItem,
     removeWornItem,
     canSearchItem,
@@ -2471,9 +2320,6 @@ const api = {
     collectPutTargets,
     containerAcceptsItem,
     isPathPrefix,
-    selectConditionalAction,
-    performAction,
-    performEffect,
     getItemChoiceOptions,
     chooseItemOption,
     getAllRootItemCollections,
@@ -2487,7 +2333,7 @@ const api = {
     createExit,
     movePlayerByEffect,
     performUpdateAction,
-    evaluateCondition,
+    testPredicate,
     getRoomClue,
     checkEndings,
     endGame,
@@ -2503,7 +2349,6 @@ const api = {
     advanceMissionTransport,
     advanceMissions,
     requestTransport,
-    recordTransportNotice,
     holdTransportForBoarding,
     advanceTransports,
     startTimer,
@@ -2518,5 +2363,6 @@ const actions = createActions(api);
 api.schedule = createScheduler(api, worldEvents);
 installDispatcher(api);
 normalizePlayerState();
+validateWorld(gameModel);
 return api;
 }

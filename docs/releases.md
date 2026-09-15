@@ -2,7 +2,7 @@
 
 The platform uses synchronized semantic versions for its engine and browser packages. Patch releases fix behavior without changing the public contract. Minor releases add compatible capabilities. Breaking public API, world schema or save semantics require a major release and migration instructions. Internal implementation paths are hidden behind package exports.
 
-Story release, world schema and saved-state format are independent. Never tie a game's story version to the engine package number just to deploy an upgrade. V1 continues to accept valid format-1 saves; adding optional runtime fields must retain defaults for prior saves. Game-specific state migrations belong to the game's controller.
+Story release, world schema and saved-state format are independent. Never tie a game's story version to the engine package number just to deploy an upgrade. Save envelope 1 remains supported; game-owned conversion must remove executable records before loading them into the current API. Adding optional runtime fields must retain defaults for compatible saves. Game-specific state migrations belong to the game's controller.
 
 ## Before a release
 

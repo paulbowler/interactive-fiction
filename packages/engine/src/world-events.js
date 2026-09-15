@@ -5,14 +5,10 @@ export function createWorldEvents(runtime) {
 function getTransport(id) {
     if (typeof id !== 'string') return undefined;
     const transports = runtime.state.transports;
-    return transports && Object.hasOwn(transports,id) ? transports[id] : runtime.findItemInGameModel(id)?.properties?.transport;
+    return transports && Object.hasOwn(transports,id) ? transports[id] : undefined;
 }
 function transportEntries() {
-    const entries = Object.entries(runtime.state.transports || {}).map(([id, transport]) => ({id,transport}));
-    const items = [];
-    runtime.getAllRootItemCollections().forEach(collection => runtime.collectItemsInCollection(collection,
-        item => Boolean(item.properties?.transport), items));
-    return [...entries, ...items.map(({key,item}) => ({id:key, transport:item.properties.transport}))];
+    return Object.entries(runtime.state.transports || {}).map(([id, transport]) => ({id,transport}));
 }
 function transportConnectionOpen(link) {
     const t = getTransport(link.id);
@@ -25,7 +21,7 @@ function getMissionRoute(config, from, to) {
         const current = queue.shift();
         if (current.room === to) return current.path;
         for (const edge of config.routes[current.room] || []) {
-            if (seen.has(edge.to) || (edge.condition && !runtime.evaluateCondition(edge.condition))) continue;
+            if (seen.has(edge.to)) continue;
             seen.add(edge.to);
             queue.push({ room: edge.to, path: [...current.path, edge] });
         }
@@ -35,15 +31,14 @@ function getMissionRoute(config, from, to) {
 
 function emitNpcReport(key, texts) {
     const npc = runtime.findItemInGameModel(key)?.properties?.npc;
-    const condition = npc?.turnCue?.condition;
-    if (condition && !runtime.evaluateCondition(condition)) return;
+    if (!runtime.isAvailable({type: 'npcCue', target: key, option: 'turn'})) return;
     const text = runtime.chooseVariedText(texts, npc.lastMissionReport);
     if (!text) return;
     npc.lastMissionReport = text;
     runtime.state.player.movementCues ||= [];
     // A deliberate report supersedes incidental movement sound this turn.
     runtime.state.player.movementCues = runtime.state.player.movementCues.filter(cue => cue.source !== key || !cue.fresh);
-    runtime.state.player.movementCues.push({ source: key, text, condition: runtime.cloneModel(condition || null), fresh: true });
+    runtime.state.player.movementCues.push({ source: key, text, kind: 'turn', fresh: true });
 }
 
 function startMission(effect) {
@@ -51,10 +46,9 @@ function startMission(effect) {
     const npc = location?.item.properties?.npc;
     const config = npc?.missions;
     const destination = config?.destinations?.[effect.destination];
-    const repeatAllowed = destination?.repeatWhen && runtime.evaluateCondition(destination.repeatWhen);
-    const unavailable = npc?.mission?.active || (npc?.completed?.[effect.destination] && !repeatAllowed);
+    const unavailable = npc?.mission?.active || npc?.completed?.[effect.destination];
     if (!destination || (!effect.force && unavailable) ||
-        (destination.condition && !runtime.evaluateCondition(destination.condition)) ||
+        !runtime.isAvailable({type: 'mission', target: effect.item, option: effect.destination}) ||
         !getMissionRoute(config, location.owner.key, destination.room)) return false;
     delete location.item.properties.timer;
     npc.mission = { active: true, destination: effect.destination, phase: 'outbound', justStarted: true };
@@ -142,18 +136,19 @@ function advanceMissions() {
         if (route.length) {
             const edge = route[0];
             if (edge.transport) { advanceMissionTransport(key, npc, edge, room); continue; }
-            (edge.effects || []).forEach(runtime.performEffect);
+            runtime.events.emit('missionStepStarted', {actor:key, from:room, to:edge.to, destination:mission.destination, phase:mission.phase});
             runtime.moveItem(key, runtime.state.rooms[edge.to].items);
             if (edge.to !== target) continue;
         }
         if (mission.phase === 'returning') finishMission(key, npc);
         else {
             mission.phase = 'searching'; npc.state = config.states.searching;
-            const visit = { ...destination, ...(destination.variants || []).find(variant => runtime.evaluateCondition(variant.condition)) };
+            const variant = (destination.variants || []).find(variant => (!variant.id || runtime.isAvailable({type: 'missionVariant', target:key, secondaryTarget:mission.destination, option:variant.id})));
+            const visit = { ...destination, ...variant };
             mission.remaining = visit.searchTurns;
             mission.finished = runtime.cloneModel(visit.finished || []);
             emitNpcReport(key, visit.arrival);
-            (visit.effects || []).forEach(runtime.performEffect);
+            runtime.events.emit('missionArrived', {actor:key, destination:mission.destination, room:target, variant:runtime.cloneModel(variant || null)});
         }
     }
 }
@@ -161,25 +156,19 @@ function advanceMissions() {
 function requestTransport(effect = {}) {
     if (!effect || typeof effect !== 'object' || Array.isArray(effect)) return false;
     const transport = getTransport(effect.transport ?? effect.item);
-    if (!transport || typeof effect.destination !== 'string' || !Object.hasOwn(transport.stops, effect.destination) || (effect.condition && !runtime.evaluateCondition(effect.condition))) return false;
+    if (!transport || typeof effect.destination !== 'string' || !Object.hasOwn(transport.stops, effect.destination) || (effect.condition && !runtime.testPredicate(effect.condition))) return false;
+    if (effect.effects !== undefined) return false;
     if (effect.dwell !== undefined && (!Number.isSafeInteger(effect.dwell) || effect.dwell < 0)) return false;
     if (effect.actor && effect.actor !== 'player' && !runtime.findItem(effect.actor)) return false;
+    if (effect.event !== undefined && (typeof effect.event !== 'string' || !effect.event.trim())) return false;
     transport.queue ||= [];
     const actor = effect.actor || 'player';
     const duplicate = request => request?.destination === effect.destination && request.actor === actor;
     if (duplicate(transport.request) || transport.queue.some(duplicate)) return false;
     transport.queue.push({ destination: effect.destination, actor,
-        dwell: effect.dwell || 0, effects: runtime.cloneModel(effect.effects || []), condition: runtime.cloneModel(effect.condition || null) });
+        dwell: effect.dwell || 0, condition: runtime.cloneModel(effect.condition || null),
+        ...(effect.event ? {event:effect.event, data:runtime.cloneModel(effect.data ?? null)} : {}) });
     return true;
-}
-
-function recordTransportNotice(transport, event) {
-    for (const notice of transport.notices?.[event] || []) {
-        if (notice.room !== runtime.state.player.currentRoom ||
-            (notice.condition && !runtime.evaluateCondition(notice.condition))) continue;
-        const text = runtime.buildConditionalText(notice.text);
-        if (text) runtime.state.player.turnObservations.push({ room: notice.room, text });
-    }
 }
 
 // Entering an open boarding space holds it for this action without cancelling requests.
@@ -199,17 +188,18 @@ function advanceTransports() {
             setTransportOpen(transport, true);
             transport.dwell = request.dwell;
             // Retain the request while callbacks and observation conditions run.
-            if (!request.condition || runtime.evaluateCondition(request.condition)) (request.effects || []).forEach(runtime.performEffect);
-            recordTransportNotice(transport, 'arrival');
+            if (!request.condition || runtime.testPredicate(request.condition)) {
+                if (request.event) runtime.events.emit(request.event, request.data);
+            }
             delete transport.request;
-            if (transport.space) runtime.events.emit('transportArrived', {transport:id, stop:transport.stop, actor:request.actor});
+            runtime.events.emit('transportArrived', {transport:id, stop:transport.stop, actor:request.actor});
             continue;
         }
         if (transport.dwell > 0) { transport.dwell--; continue; }
         let request;
         while (transport.queue?.length && !request) {
             const candidate = transport.queue.shift();
-            if (!candidate.condition || runtime.evaluateCondition(candidate.condition)) request = candidate;
+            if (!candidate.condition || runtime.testPredicate(candidate.condition)) request = candidate;
         }
         if (!request) continue;
         transport.request = request;
@@ -217,16 +207,16 @@ function advanceTransports() {
             const wasOpen = transportOpen(transport);
             setTransportOpen(transport, true);
             transport.dwell = request.dwell;
-            (request.effects || []).forEach(runtime.performEffect);
-            if (!wasOpen) recordTransportNotice(transport, 'opening');
+            if (request.event) runtime.events.emit(request.event, request.data);
+            if (!wasOpen) {
+                runtime.events.emit('transportOpened', {transport:id, stop:transport.stop, actor:request.actor});
+            }
             delete transport.request;
             continue;
         }
         setTransportOpen(transport, false);
         transport.phase = 'moving';
-        (transport.stops[request.destination].effects || []).forEach(runtime.performEffect);
-        recordTransportNotice(transport, 'departure');
-        if (transport.space) runtime.events.emit('transportDeparted', {transport:id, from:transport.stop, destination:request.destination, actor:request.actor});
+        runtime.events.emit('transportDeparted', {transport:id, from:transport.stop, destination:request.destination, actor:request.actor});
     }
 }
 
@@ -236,10 +226,13 @@ function startTimer(effect) {
         return;
     }
 
+    if (effect.effects !== undefined) throw new TypeError('Timer consequences require an event');
+    if (effect.event !== undefined && (typeof effect.event !== 'string' || !effect.event.trim())) throw new TypeError('Timer event must be a nonempty string');
+    if (effect.justStarted !== undefined && typeof effect.justStarted !== 'boolean') throw new TypeError('Timer grace must be a boolean');
     item.properties.timer = {
         remaining: Math.max(0, Math.floor(effect.turns)),
-        effects: Array.isArray(effect.effects) ? effect.effects : [],
-        justStarted: true,
+        ...(effect.event ? {event: effect.event, data: runtime.cloneModel(effect.data ?? null)} : {}),
+        justStarted: effect.justStarted ?? true,
         ...(effect.waitUntil ? { waitUntil: runtime.cloneModel(effect.waitUntil) } : {})
     };
 }
@@ -261,12 +254,11 @@ function advanceTimers() {
 
         timer.remaining = Math.max(0, (timer.remaining || 0) - 1);
 
-        if (timer.remaining === 0 && (!timer.waitUntil || runtime.evaluateCondition(timer.waitUntil))) {
-            const effects = Array.isArray(timer.effects) ? timer.effects : [];
+        if (timer.remaining === 0 && (!timer.waitUntil || runtime.testPredicate(timer.waitUntil))) {
             delete item.properties.timer;
-            effects.forEach(runtime.performEffect);
+            if (timer.event) runtime.events.emit(timer.event, timer.data);
         }
     });
 }
-return { getTransport, transportConnectionOpen, getMissionRoute, emitNpcReport, startMission, finishMission, advanceMissionTransport, advanceMissions, requestTransport, recordTransportNotice, holdTransportForBoarding, advanceTransports, startTimer, advanceTimers };
+return { getTransport, transportConnectionOpen, getMissionRoute, emitNpcReport, startMission, finishMission, advanceMissionTransport, advanceMissions, requestTransport, holdTransportForBoarding, advanceTransports, startTimer, advanceTimers };
 }

@@ -30,7 +30,9 @@ const game = createGame({
   player: { room: 'workshop', carried: {
     silverCup: { name: 'Silver Cup', portable: true, polishable: true, polished: false },
   } },
-  rooms: { workshop: { name: 'Workshop' } },
+  rooms: { workshop: { name: 'Workshop', prose: {
+    cannotPolish: 'You cannot polish that now.', polished: 'It shines.',
+  } } },
 });
 
 game.registerAction('polish', ctx => {
@@ -38,12 +40,12 @@ game.registerAction('polish', ctx => {
   if (!location || !ctx.game.canActOnItem(ctx.action.target) ||
       !ctx.game.isDirectlyCarriedLocation(location) ||
       !location.item.properties.polishable || location.item.properties.polished) {
-    ctx.say('You cannot polish that now.');
+    ctx.say(ctx.state.rooms.workshop.prose.cannotPolish);
     return;
   }
   ctx.set(ctx.action.target, 'properties.polished', true);
   ctx.emit('objectPolished', { item: ctx.action.target });
-  ctx.say('It shines.');
+  ctx.say(ctx.state.rooms.workshop.prose.polished);
   ctx.commit();
 });
 
@@ -51,15 +53,15 @@ game.dispatch({ type: 'start' });
 game.dispatch({ type: 'polish', target: 'silverCup' });
 ```
 
-Author eligible objects with `portable:true, polishable:true, polished:false`. These are custom fields until your controller handles them. Dispatch `{type:'polish', target:'silverCup'}` from a custom control. `registerAction` does **not** automatically add a standard browser item-menu button. For a standard choice button, install a `choices` entry with a registered script performing the same reusable mutation, rather than dispatching recursively from a script.
+Author eligible objects with `portable:true, polishable:true, polished:false`. These are custom fields until your controller handles them. Dispatch `{type:'polish', target:'silverCup'}` from a custom control. `registerAction` does **not** automatically add a standard browser item-menu button. For a standard choice button, declare a named `choices` entry and handle it in an instead rule using the same mutation function. Do not dispatch recursively.
 
 A normal registered handler commits its mutation to report success and run after rules. In an **instead rule**, return `HANDLED` after making and committing the replacement mutation. `STOP` blocks a rule pipeline. Avoid nested dispatch; emit events for consequences. Event listeners and rule callbacks are synchronous.
 
-Reacquire `game.state` and `findItem` results inside callbacks; load replaces the state object. A closure may retain IDs and immutable configuration, but essential progress belongs in saved state. Register the same handlers/scripts for every runtime before loading.
+Reacquire `game.state` and `findItem` results inside callbacks; load replaces the state object. A closure may retain IDs and immutable configuration, but essential progress belongs in saved state. Register the same rules, predicates and event listeners for every runtime before loading.
 
 ## Promote a capability into the reusable engine
 
-1. Define its public authoring fields, native types, defaults, implications and interactions with existing traits. Keep new fields optional for compatible v1 updates. Decide whether a field is merely descriptive metadata or changes standard semantics.
+1. Define its public authoring fields, native types, defaults, implications and interactions with existing traits. Keep new fields optional for compatible updates. Decide whether a field is merely descriptive metadata or changes standard semantics.
 2. Add normalization in `packages/engine/src/normalise-world.js` if canonical placement/defaults need it. Ensure new references and invalid combinations fail clearly. Do not reapply initial defaults over saved mutable state.
 3. Implement semantics in `src/actions.js` or a small focused engine module. Register the canonical action in `src/dispatcher.js` if new. Keep reachability, inventory, locking and turn cost consistent.
 4. Update `getAvailableActions` and relevant target/query helpers in `src/game.js` when the default browser should offer it. The view's action IDs must map to dispatcher intentions; a visible button is not a substitute for semantic checks.
@@ -72,12 +74,12 @@ The modules are plain JavaScript. There is no need for a new schema DSL, state-m
 
 ## Extension checks that catch subtle regressions
 
-- Exit conditions block on true; ordinary visibility/availability conditions allow on true. Include explicit blocker messages.
+- Before rules report exceptional blockers; availability predicates return true to allow an interaction. Ordinary doors block travel through declared exit references.
 - Scenery affects listing; hidden affects interaction. A fixed object is not portable.
 - Owned, directly carried and accessible are different. Transparent containers expose accessible contents; ordinary placement still requires an open destination.
 - Look/examine are normally free, but Read and recording notes cost turns. A custom mutation must commit exactly once.
 - After rules run before the current action's timed world updates. A timer and a scheduled event do not have identical first-turn semantics.
-- Runtime paths differ from flat authoring paths. Conditions use paths relative to `properties`; `ctx.set` uses a full object-relative path including `properties`.
+- Runtime paths differ from flat authoring paths. `getItemPropertyValue` uses paths relative to `properties`; `ctx.set` uses a full object-relative path including `properties`.
 - `enterText` takes the note ID first and device ID second. Key-based Unlock takes the locked object first and key second.
 - Check duplicate IDs, reverse exits, actor transport queues, pending acknowledgements and restoration during an active sequence when relevant.
 

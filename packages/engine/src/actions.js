@@ -1,5 +1,5 @@
-// Generic item actions, preserved from the original controller. World properties
-// govern ordinary semantics; registered scripts supply exceptional consequences.
+// Generic item actions. World capabilities govern ordinary semantics;
+// externally registered rules supply exceptional consequences.
 export function createActions(runtime) {
 const PLAYER_COLLECTIONS = ['carried', 'worn'];
 function handleItemAction(action, itemKey) {
@@ -102,19 +102,18 @@ function chooseItemAction(itemKey, choiceIndex) {
     const item = runtime.findItemInGameModel(itemKey);
     const choice = item?.properties?.choices?.[choiceIndex];
 
-    if (!choice || (choice.condition && !runtime.evaluateCondition(choice.condition))) {
+    if (!choice) {
         return;
     }
 
     if (choice.options) return runtime.showItemChoiceOptions(itemKey, choiceIndex);
-    const action = selectConditionalAction(choice);
-    if (action && performAction(action)) runtime.commitMutation();
+    // A choice without a submenu is implemented by an external action rule.
 }
 
 
 function enterItemInput(itemKey) {
     const input = runtime.findItemInGameModel(itemKey)?.properties?.input;
-    if (!input || input.notesOnly || !runtime.canActOnItem(itemKey) || (input.condition && !runtime.evaluateCondition(input.condition))) return;
+    if (!input || input.notesOnly || !runtime.canActOnItem(itemKey)) return;
     runtime.messages.push({ type: 'input', target: itemKey, input: runtime.cloneModel(input) });
     runtime.output('requestTextInput', input, itemKey);
 }
@@ -122,14 +121,9 @@ function enterItemInput(itemKey) {
 
 function submitTextInput(itemKey, value) {
     const input = runtime.findItemInGameModel(itemKey)?.properties?.input;
-    if (!input || !runtime.canActOnItem(itemKey) || (input.condition && !runtime.evaluateCondition(input.condition))) return;
-    const response = (input.accepted || []).find(response => inputValueMatches(value, response, input));
-    if (response) {
-        if (performAction(response.action)) runtime.commitMutation();
-    } else {
-        runtime.displayMessageModal(input.failureMessage || 'That is not accepted.', input.failureTitle || 'Rejected');
-        if (input.failureConsumesTurn) runtime.commitMutation();
-    }
+    if (!input || !runtime.canActOnItem(itemKey)) return;
+    runtime.displayMessageModal(input.failureMessage || 'That is not accepted.', input.failureTitle || 'Rejected');
+    if (input.failureConsumesTurn) runtime.commitMutation();
 }
 
 
@@ -148,18 +142,6 @@ function recordNote(sourceKey, index = 0) {
 }
 
 
-function inputValueMatches(rawValue, response = {}, input = {}) {
-    const values = Array.isArray(response.values) ? response.values : [response.value];
-    const normalize = (value) => {
-        const text = String(value ?? '').trim();
-        return input.caseSensitive || response.caseSensitive ? text : text.toLowerCase();
-    };
-    const candidate = normalize(rawValue);
-
-    return values.some((value) => normalize(value) === candidate);
-}
-
-
 function chooseToolAction(toolKey, actionIndex) {
     const toolAction = runtime.getToolActions(toolKey)[actionIndex];
 
@@ -167,7 +149,7 @@ function chooseToolAction(toolKey, actionIndex) {
         return;
     }
 
-    if (performAction(toolAction.action)) runtime.commitMutation();
+    // Tool options identify intentions; external rules implement their effects.
 }
 
 // Function to eat an item
@@ -256,11 +238,6 @@ function takeOutItem(itemKey) {
         return;
     }
 
-    if (item.properties.takeOutCondition && !runtime.evaluateCondition(item.properties.takeOutCondition)) {
-        runtime.displayMessageModal(item.properties.takeOutMessage || 'You cannot remove it yet.', 'Still Needed');
-        return;
-    }
-
     const movedItem = runtime.deleteItem(itemKey);
     if (movedItem) {
         runtime.getPlayerCarriedItems()[itemKey] = movedItem;
@@ -283,24 +260,8 @@ function putItemInContainer(itemKey, containerKey) {
     }
 
     runtime.moveItem(itemKey, container.properties.container.items);
-    const putAction = performContainerPutAction(containerKey, itemKey);
-    if (!putAction?.message) runtime.displayMessageModal(`You put ${runtime.getProseItemName(itemLocation.item)} ${container.properties.container.supporter ? 'on' : 'in'} ${runtime.getProseItemName(container)}.`, 'Done');
+    runtime.displayMessageModal(`You put ${runtime.getProseItemName(itemLocation.item)} ${container.properties.container.supporter ? 'on' : 'in'} ${runtime.getProseItemName(container)}.`, 'Done');
     runtime.commitMutation();
-}
-
-
-function performContainerPutAction(containerKey, itemKey) {
-    const containerItem = runtime.findItemInGameModel(containerKey);
-    const putActions = containerItem?.properties?.container?.onPut || [];
-    const matchingAction = putActions.find((putAction) => {
-        return putAction.item === itemKey && runtime.evaluateCondition(putAction.condition);
-    });
-
-    if (matchingAction?.action) {
-        performAction(matchingAction.action);
-        return matchingAction.action;
-    }
-    return null;
 }
 
 
@@ -346,10 +307,9 @@ function searchItem(itemKey) {
 
     const firstSearch = !searchable.searched;
     searchable.searched = true;
-    const changed = searchable.action ? performAction(searchable.action) : false;
 
-    if (!searchable.action?.message) runtime.displayMessageModal(searchable.message || `You search ${runtime.getProseItemName(item)}.`, searchable.title || 'Searched');
-    if (firstSearch || changed) runtime.commitMutation();
+    runtime.displayMessageModal(searchable.message || `You search ${runtime.getProseItemName(item)}.`, searchable.title || 'Searched', null, []);
+    if (firstSearch) runtime.commitMutation();
 }
 
 
@@ -531,8 +491,6 @@ function handleInsertion(itemKey, targetKey) {
 
         const before = JSON.stringify(runtime.state);
         const insertion = target.properties.container.insertable[itemKey];
-        const action = insertion.action;
-        performAction(action);
 
         const itemLocationAfterAction = runtime.findItem(itemKey);
         if (itemLocationAfterAction?.item === item && !item.properties?.retain && !insertion.retain) {
@@ -573,9 +531,8 @@ function connectItem(itemKey, targetKey) {
 
     disconnectOtherTargets(item, targetKey);
     connection.connected = true;
-    performAction(connection.action || {});
 
-    if (!connection.action?.message) {
+    {
         const target = runtime.findItemInGameModel(targetKey);
         runtime.displayMessageModal(connection.message || `You connect ${runtime.getProseItemName(item)} to ${runtime.getProseItemName(target || { name: 'target' })}.`, connection.title || 'Connected');
     }
@@ -595,9 +552,8 @@ function disconnectItem(itemKey, targetKey) {
     }
 
     connection.connected = false;
-    performAction(connection.disconnectAction || {});
 
-    if (!connection.disconnectAction?.message) {
+    {
         const target = runtime.findItemInGameModel(targetKey);
         runtime.displayMessageModal(connection.disconnectMessage || `You disconnect ${runtime.getProseItemName(item)} from ${runtime.getProseItemName(target || { name: 'target' })}.`, connection.disconnectTitle || 'Disconnected');
     }
@@ -637,112 +593,22 @@ function clearConnectableStateInItems(items) {
 }
 
 
-function selectConditionalAction(actionSource = {}) {
-    if (Array.isArray(actionSource.actions)) {
-        const matchingAction = actionSource.actions.find((action) => runtime.evaluateCondition(action.condition));
-        if (matchingAction) {
-            return matchingAction;
-        }
-    }
-
-    return actionSource.action || null;
-}
-
-
-function performAction(action = {}) {
-    if (action.condition && !runtime.evaluateCondition(action.condition)) {
-        return false;
-    }
-    const before = JSON.stringify(runtime.state);
-
-    if (action.update) {
-        runtime.performUpdateAction(action.update);
-    }
-
-    (action.effects || []).forEach(runtime.performEffect);
-
-    const changed = JSON.stringify(runtime.state) !== before;
-    if (action.message || action.messages) {
-        const message = action.messages ? runtime.chooseVariedText(action.messages, action.lastMessage) : action.message;
-        if (action.messages && message) action.lastMessage = message;
-        if (message) runtime.displayMessageModal([message, runtime.buildConditionalText(action.messageSuffix, true)].filter(Boolean).join(' '), action.title || 'Done', null, action.noteSources || []);
-    }
-    return changed || action.consumesTurn === true;
-}
-
-
 function chooseItemOption(itemKey, choiceIndex, optionIndex) {
     const option = runtime.getItemChoiceOptions(itemKey, choiceIndex).find(entry => entry.index === optionIndex);
     if (!option || option.disabled) return;
-    const action = selectConditionalAction(option);
-    if (action && performAction(action)) runtime.commitMutation();
+    // The selected option is handled by an external action rule.
 }
 
 
 function pushItem(itemKey) {
     if (!runtime.canActOnItem(itemKey)) return;
     const item = runtime.findItemInGameModel(itemKey);
-    const standingOnItemKey = runtime.getStandingOnItemKey();
+    if (!runtime.canPushOrPull('push')) return;
 
-    if (standingOnItemKey) {
-        const standingOnItem = runtime.findItemInGameModel(standingOnItemKey);
-        runtime.displayMessageModal(`You need to climb down from ${runtime.getProseItemName(standingOnItem)} before pushing anything.`, 'Climb Down First');
-        return;
-    }
-
-    if (item && item.properties.pushable && !item.properties.pushable.pushed &&
-        (!item.properties.pushable.condition || runtime.evaluateCondition(item.properties.pushable.condition))) {
+    if (item && item.properties.pushable && !item.properties.pushable.pushed) {
         const pushable = item.properties.pushable;
-        const pushAction = Array.isArray(pushable.onPush?.actions)
-            ? selectConditionalAction(pushable.onPush) : pushable.onPush;
-        if (pushAction?.condition && !runtime.evaluateCondition(pushAction.condition)) return;
         pushable.pushed = true;
-        let exitMessage = null;
-        let customMessage = null;
-
-        if (pushAction?.update) {
-            runtime.performUpdateAction(pushAction.update);
-        }
-
-        (pushAction?.effects || []).forEach(runtime.performEffect);
-
-        if (pushAction?.message) {
-            customMessage = pushAction.message;
-        }
-
-        if (pushAction && pushAction.createExit) {
-            const currentRoomKey = runtime.state.player.currentRoom;
-            const room = runtime.state.rooms[currentRoomKey];
-            const roomName = runtime.state.rooms[pushAction.createExit.target]?.name || pushAction.createExit.target;
-            const exitDefinition = runtime.normalizeExitDefinition(pushAction.createExit, roomName);
-            const exitPayload = {};
-
-            // Create the new exit
-            if (exitDefinition?.before) {
-                exitPayload.before = exitDefinition.before;
-            }
-
-            if (exitDefinition?.after) {
-                exitPayload.after = exitDefinition.after;
-            }
-
-            room.exits[pushAction.createExit.target] = exitPayload;
-
-            exitMessage = runtime.capitalizeFirstLetter(runtime.buildExitText(pushAction.createExit.target, exitDefinition));
-        }
-
-        if (customMessage || exitMessage) {
-            const messageParts = [];
-            if (customMessage) {
-                messageParts.push(customMessage);
-            }
-            if (exitMessage) {
-                messageParts.push(exitMessage);
-            }
-            runtime.displayMessageModal(customMessage ? messageParts.join(' ') : `You push ${runtime.getProseItemName(item)}. ${messageParts.join(' ')}`, 'Done');
-        } else {
-            runtime.displayMessageModal(`You push ${runtime.getProseItemName(item)}.`, 'Done');
-        }
+        runtime.displayMessageModal(pushable.message || `You push ${runtime.getProseItemName(item)}.`, pushable.title || 'Done');
 
         runtime.commitMutation();
     }
@@ -752,23 +618,16 @@ function pushItem(itemKey) {
 function pullItem(itemKey) {
     if (!runtime.canActOnItem(itemKey)) return;
     const item = runtime.findItemInGameModel(itemKey);
-    const standingOnItemKey = runtime.getStandingOnItemKey();
-
-    if (standingOnItemKey) {
-        const standingOnItem = runtime.findItemInGameModel(standingOnItemKey);
-        runtime.displayMessageModal(`You need to climb down from ${runtime.getProseItemName(standingOnItem)} before pulling anything.`, 'Climb Down First');
-        return;
-    }
+    if (!runtime.canPushOrPull('pull')) return;
 
     if (!item?.properties?.pushable?.pushed || !item.properties.pullable) {
         return;
     }
 
     item.properties.pushable.pushed = false;
-    performAction(item.properties.pullable.action || {});
     if (item.properties.pullable.message) {
-        runtime.displayMessageModal(item.properties.pullable.message, item.properties.pullable.title || 'Done');
-    } else if (!item.properties.pullable.action?.message) {
+        runtime.displayMessageModal(item.properties.pullable.message, item.properties.pullable.title || 'Done', null, []);
+    } else {
         runtime.displayMessageModal(`You pull ${runtime.getProseItemName(item)}.`, 'Done');
     }
     runtime.commitMutation();
@@ -793,7 +652,8 @@ function climbItem(itemKey) {
             item: itemKey
         };
 
-        const climbMessage = runtime.buildConditionalText(item.properties.climbable.message) || `You climb onto ${runtime.getProseItemName(item)}.`;
+        const climbMessage = runtime.buildConditionalText(item.properties.climbable.message, false,
+            { target: itemKey, field: 'climb' }) || `You climb onto ${runtime.getProseItemName(item)}.`;
         runtime.displayMessageModal(climbMessage, 'Done');
         runtime.commitMutation();
     }
@@ -824,16 +684,17 @@ function pressItem(itemKey) {
         return;
     }
 
-    const action = selectConditionalAction(pressable);
-    const changed = action ? performAction(action) : false;
-
-    if (!action?.message && pressable.message) {
-        runtime.displayMessageModal(pressable.message, pressable.title || 'Done');
+    if (pressable.transport) {
+        runtime.requestTransport({transport: pressable.transport, destination: pressable.stop, dwell: pressable.dwell || 0});
+        if (pressable.message) runtime.displayMessageModal(pressable.message, pressable.title || 'Done', null, []);
+        runtime.commitMutation();
+        return;
     }
-    if (changed) runtime.commitMutation();
+
+    if (pressable.message) runtime.displayMessageModal(pressable.message, pressable.title || 'Done');
 }
 
 // Function to close the message modal
 
-return { handleItemAction, chooseItemAction, enterItemInput, submitTextInput, enterRecordedText, recordNote, inputValueMatches, chooseToolAction, eatItem, dropItem, pickUpItem, movePlayerItemToCollection, takeOutItem, putItemInContainer, performContainerPutAction, wearItem, removeWornItem, searchItem, unlockContainer, lockContainer, openContainer, closeContainer, unlockDoor, lockDoor, openDoor, closeDoor, turnOnItem, turnOffItem, handleInsertion, moveItemToContainer, connectItem, disconnectItem, disconnectOtherTargets, clearPlayerConnectableState, clearConnectableStateInItems, selectConditionalAction, performAction, chooseItemOption, pushItem, pullItem, climbItem, climbDownFromItem, pressItem };
+return { handleItemAction, chooseItemAction, enterItemInput, submitTextInput, enterRecordedText, recordNote, chooseToolAction, eatItem, dropItem, pickUpItem, movePlayerItemToCollection, takeOutItem, putItemInContainer, wearItem, removeWornItem, searchItem, unlockContainer, lockContainer, openContainer, closeContainer, unlockDoor, lockDoor, openDoor, closeDoor, turnOnItem, turnOffItem, handleInsertion, moveItemToContainer, connectItem, disconnectItem, disconnectOtherTargets, clearPlayerConnectableState, clearConnectableStateInItems, chooseItemOption, pushItem, pullItem, climbItem, climbDownFromItem, pressItem };
 }

@@ -536,7 +536,7 @@ function renderEndScreen() {
     const ending = getCurrentEnding() || {};
     const title = ending.title || ending.name || 'The End';
     const kicker = ending.kicker || 'The End';
-    const endingText = ending.text || '';
+    const endingText = game.getEndingText(ending);
     const achievements = getEarnedAchievements();
     const totalAchievements = getTotalAchievementCount();
 

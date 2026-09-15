@@ -1,6 +1,6 @@
 # Interactive Fiction
 
-Reusable JavaScript packages for standalone point-and-click games. **Version 1.6.2 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
+Reusable JavaScript packages for standalone point-and-click games. **Version 2.0.0 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
 
 | Package | Purpose |
 | --- | --- |
@@ -56,7 +56,7 @@ Ordinary taking, dropping, containers, locks, inventory and movement need world 
 Packages are distributed as npm-compatible archives on [GitHub Releases](https://github.com/paulbowler/interactive-fiction/releases). No npm registry account is needed to consume them. The template’s `.npmrc` permits its declared release URLs on npm 12 and later.
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.2/paulbowler-if-engine-1.6.2.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v1.6.2/paulbowler-if-browser-1.6.2.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v2.0.0/paulbowler-if-engine-2.0.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v2.0.0/paulbowler-if-browser-2.0.0.tgz
 ```
 
 For an upgrade, install both archives for the desired release, run the game's tests, rebuild and redeploy. Commit the updated package and lock files. Existing deployments keep their installed release until redeployed. Keep the previous `dist` or source/lockfile release to roll back.
@@ -81,4 +81,4 @@ The packages are plain ES modules with explicit entry points. Internal source pa
 
 ## Scope
 
-V1 is synchronous and single-player. It provides point-and-click object interactions, navigation and story rules. Conversation systems and natural-language parsing can be added by game controllers. The default browser view mounts once per document. Game scripts and prose are trusted application content; see [security boundaries](SECURITY.md).
+The engine is synchronous and single-player. It provides point-and-click object interactions, navigation and story rules. Conversation systems and natural-language parsing can be added by game controllers. The default browser view mounts once per document. Game scripts and prose are trusted application content; see [security boundaries](SECURITY.md).

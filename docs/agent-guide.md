@@ -31,7 +31,7 @@ Actions are attempts; events are facts. Emit a named event for a consequence and
 
 Store essential progress in `game.state`. Register callbacks and event handlers for every runtime before restoring a save. Do not store progress in closures, DOM elements, dates, timers, promises or functions. Use `game.save()` and a newly configured runtime's `load()` to test restoration.
 
-Keep game identity stable. Engine package version, story version, schema version and save format are separate. Do not change the story's version simply because an engine patch is installed. If changing script IDs or incompatible puzzle state, implement and test a story-owned save migration instead of silently deleting progress.
+Keep game identity stable. Engine package version, story version, schema version and save format are separate. Do not change the story's version simply because an engine patch is installed. If changing predicate/event IDs or incompatible puzzle state, implement and test a story-owned save migration instead of silently deleting progress.
 
 ## Verification
 

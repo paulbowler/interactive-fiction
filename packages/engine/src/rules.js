@@ -3,7 +3,7 @@ export const STOP = 'STOP';
 export const HANDLED = 'HANDLED';
 
 export function createRules() {
-    const phases = { before: [], instead: [], after: [], report: [] };
+    const phases = { before: [], instead: [], after: [], report: [], available: [] };
     function matches(rule, ctx) {
         if (rule.type !== '*' && rule.type !== ctx.action.type) return false;
         const match = rule.match;
@@ -29,6 +29,15 @@ export function createRules() {
                 if (result !== CONTINUE) return result;
             }
             return CONTINUE;
+        },
+        available(ctx) {
+            for (const rule of phases.available) {
+                if (!matches(rule, ctx)) continue;
+                const allowed = rule.handler(ctx);
+                if (typeof allowed !== 'boolean') throw new TypeError('Availability predicates must return a boolean');
+                if (!allowed) return false;
+            }
+            return true;
         }
     };
 }

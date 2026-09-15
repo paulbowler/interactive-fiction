@@ -1,16 +1,33 @@
 // Transport state belongs to an entity; occupants belong to its boarding space.
 // Object-backed spaces are reserved until player containment supports boarding.
-export function transportRoom(t) { return t.space?.room ?? t.room; }
-export function transportStop(t) { return t.space ? t.stop : t.currentFloor; }
-export function transportOpen(t) { return t.space ? t.boardingOpen : t.doorsOpen; }
-export function setTransportStop(t, stop) { t[t.space ? 'stop' : 'currentFloor'] = stop; }
-export function setTransportOpen(t, open) { t[t.space ? 'boardingOpen' : 'doorsOpen'] = open; }
-export function transportStopRoom(t, stop) { return t.space ? t.stops[stop]?.room : stop; }
+export function transportRoom(t) { return t.space.room; }
+export function transportStop(t) { return t.stop; }
+export function transportOpen(t) { return t.boardingOpen; }
+export function setTransportStop(t, stop) { t.stop = stop; }
+export function setTransportOpen(t, open) { t.boardingOpen = open; }
+export function transportStopRoom(t, stop) { return t.stops[stop]?.room; }
 export function transportStopAt(t, room) {
     return Object.keys(t.stops).find(stop => transportStopRoom(t, stop) === room);
 }
 
 export function validateTransports(model, connections = true) {
+    function controls(collection) {
+        for (const [id, item] of Object.entries(collection || {})) {
+            if (item.properties?.transport !== undefined || item.transport !== undefined)
+                throw new Error(`Invalid world: declare transport ${id} in the transports collection`);
+            const control = item.properties?.pressable || item.pressable;
+            if (control?.transport !== undefined) {
+                const transport = model.transports?.[control.transport];
+                if (typeof control.transport !== 'string' || typeof control.stop !== 'string' || !transport?.stops || !Object.hasOwn(transport.stops, control.stop))
+                    throw new Error(`Invalid world: unknown transport or stop on control ${id}`);
+                if (control.dwell !== undefined && (!Number.isSafeInteger(control.dwell) || control.dwell < 0))
+                    throw new Error(`Invalid world: invalid transport dwell on control ${id}`);
+            }
+            controls(item.properties?.container?.items ?? item.items);
+        }
+    }
+    for (const room of Object.values(model.rooms || {})) controls(room.items);
+    controls(model.player?.carried); controls(model.player?.worn); controls(model.items);
     if (model.transports === undefined) {
         for (const room of Object.values(model.rooms || {})) for (const exit of Object.values(room.exits || {}))
             if (exit?.transport) throw new Error('Invalid world: connection refers to missing transports');
@@ -34,6 +51,7 @@ export function validateTransports(model, connections = true) {
         const path = `transports.${id}`;
         check(id.trim() && !Object.hasOwn(model.rooms, id) && !itemIds.has(id), path, 'duplicate or conflicting entity ID');
         check(object(t), path, 'expected an object');
+        check(t.notices === undefined, `${path}.notices`, 'register transport event listeners for feedback');
         check(t.name === undefined || typeof t.name === 'string', `${path}.name`, 'expected a string');
         check(t.blockedMessage === undefined || typeof t.blockedMessage === 'string', `${path}.blockedMessage`, 'expected a string');
         check(object(t.space) && Object.keys(t.space).length === 1 && typeof t.space.room === 'string' && Object.hasOwn(model.rooms,t.space.room), `${path}.space`, 'expected {room: knownRoomId}; object boarding spaces are not supported yet');
@@ -42,6 +60,7 @@ export function validateTransports(model, connections = true) {
         check(object(t.stops) && Object.keys(t.stops).length, `${path}.stops`, 'expected at least one stop');
         const rooms = new Set();
         for (const [stop,definition] of Object.entries(t.stops)) {
+            check(definition?.effects === undefined, `${path}.stops.${stop}.effects`, 'register a transportDeparted listener for consequences');
             check(stop.trim() && object(definition) && typeof definition.room === 'string' && Object.hasOwn(model.rooms,definition.room), `${path}.stops.${stop}`, 'expected a known room');
             check(definition.room !== t.space.room && !rooms.has(definition.room), `${path}.stops.${stop}`, 'stops must refer to distinct rooms outside the boarding space');
             rooms.add(definition.room);
@@ -59,7 +78,8 @@ export function validateTransports(model, connections = true) {
             check(object(r) && typeof r.destination === 'string' && Object.hasOwn(t.stops,r.destination), where, 'unknown destination stop');
             check(r.actor === undefined || r.actor === 'player' || liveIds.has(r.actor), where, 'unknown transport actor');
             check(r.dwell === undefined || Number.isSafeInteger(r.dwell) && r.dwell >= 0, where, 'invalid dwell');
-            check(r.effects === undefined || Array.isArray(r.effects), where, 'effects must be an array');
+            check(r.effects === undefined, where, 'arrival consequences require an event');
+            check(r.event === undefined || (typeof r.event === 'string' && r.event.trim().length > 0), where, 'event must be a nonempty string');
         };
         t.queue.forEach((r,i) => request(r,`${path}.queue.${i}`));
         if (t.request !== undefined) request(t.request,`${path}.request`);
@@ -77,7 +97,7 @@ export function validateTransports(model, connections = true) {
 }
 
 export function normaliseTransports(model) {
-    if (model.transports === undefined) return;
+    if (model.transports === undefined) { validateTransports(model, false); return; }
     for (const [id,t] of Object.entries(model.transports || {})) {
         if (!t || typeof t !== 'object' || Array.isArray(t)) continue;
         if (Array.isArray(t.stops)) {

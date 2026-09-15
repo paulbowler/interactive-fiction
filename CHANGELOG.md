@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.0
+
+- All player intentions use common dispatch, explicit rule outcomes and successful-action commits.
+- Ordinary actions use capabilities; story consequences use before/instead/after rules and deterministic events.
+- Named read-only queries select text, images, exits, actor reports, mission readiness and menu choices.
+- Remove executable action/effect records, the condition expression interpreter and script registration.
+- Delayed work uses named events and explicitly registered boolean predicates; complete runtime state remains serializable.
+- Transport entities live in the transports collection, with declared boarding spaces and event-driven feedback.
+- Validate complete worlds at construction and reject invalid saves atomically.
+- Update authoring, API and extension documentation; verify packed independent games and browser/offline behavior.
+
+
 ## 1.6.2
 
 - Preserve object-local `prose` as presentation data alongside descriptions through normalization, movement and save/load.

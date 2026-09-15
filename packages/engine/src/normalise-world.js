@@ -2,6 +2,34 @@ import { normaliseTransports, validateTransports } from './transports.js';
 import { validateWorldDescriptions } from './descriptions.js';
 import { cloneSerializable } from './serialization.js';
 
+export function validateExitDoors(world, reference = world) {
+    const doors = new Set(), climbable = new Set(), present = new Set();
+    function collect(items, initial = false) {
+        for (const [id, item] of Object.entries(items || {})) {
+            if (!initial || !present.has(id)) {
+                if (item?.properties?.door || item?.door === true) doors.add(id);
+                if (item?.properties?.climbable || item?.climbable) climbable.add(id);
+            }
+            if (!initial) present.add(id);
+            collect(item?.properties?.container?.items || item?.items, initial);
+        }
+    }
+    for (const room of Object.values(world.rooms || {})) collect(room.items);
+    collect(world.player?.carried); collect(world.player?.worn);
+    if (reference !== world) {
+        for (const room of Object.values(reference.rooms || {})) collect(room.items, true);
+        collect(reference.player?.carried, true); collect(reference.player?.worn, true);
+    }
+    for (const [room, definition] of Object.entries(world.rooms || {})) {
+        for (const [destination, exit] of Object.entries(definition.exits || {})) {
+            if (exit?.door !== undefined && (typeof exit.door !== 'string' || !doors.has(exit.door)))
+                throw new Error(`Invalid world at rooms.${room}.exits.${destination}.door: expected an existing door ID`);
+            if (exit?.standingOn !== undefined && (typeof exit.standingOn !== 'string' || !climbable.has(exit.standingOn)))
+                throw new Error(`Invalid world at rooms.${room}.exits.${destination}.standingOn: expected an existing climbable object ID`);
+        }
+    }
+}
+
 // Authoring is concise; runtime containment has one owner collection per object.
 // An already canonical world/save is cloned without changing its state.
 export function normaliseWorld(definition) {
@@ -34,7 +62,7 @@ export function normaliseWorld(definition) {
         delete room.scenery;
     }
     if (world.schemaVersion !== undefined && world.schemaVersion !== 1) fail('schemaVersion', 'Unsupported world schema version');
-    if (world.player?.currentRoom !== undefined && world.player.room === undefined) { validateTransports(world); return world; }
+    if (world.player?.currentRoom !== undefined && world.player.room === undefined) { validateTransports(world); validateExitDoors(world); return world; }
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');
     record(world.player, 'player');
     if (world.player.currentRoom !== undefined) fail('player', 'use room only');
@@ -130,6 +158,7 @@ export function normaliseWorld(definition) {
     world.player.worn = items(world.player.worn, 'player.worn', live);
     world.items = items(world.items, 'items', prototypes);
     for (const [path, id] of references) if (!live.has(id) && !prototypes.has(id)) fail(path, `unknown object ${id}`);
+    validateExitDoors(world);
     const forbidden = new Set(['onTake', 'onMove', 'beforeOpen', 'afterEnter', 'script', 'callback', 'effects', 'stateRules']);
     function checkData(value, path) {
         if (!object(value) && !Array.isArray(value)) return;

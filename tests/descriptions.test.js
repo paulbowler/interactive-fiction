@@ -91,14 +91,15 @@ test('bad resolver results, asynchronous handlers, duplicates and cycles fail cl
     assert.equal(game.getDescription('box'),'The box is closed.');
     assert.throws(()=>game.getDescription('missing'),/Unknown description target/);
 });
-test('conditional array worlds and saves retain their current rendering semantics',()=>{
-    const model=world();model.rooms.workshop.items.box.description=[
-        'A box. ',{condition:{type:'itemState',item:'box',state:'container.opened'},text:'It is open.'}
-    ];
-    const game=createGame(model);game.describe('box',()=>{throw new Error('Array compatibility must bypass variants');});
-    assert.equal(game.getDescription('box'),'A box. ');game.dispatch({type:'open',target:'box'});
-    assert.equal(game.getDescription('box'),'A box. It is open.');
-    assert.equal(createGame(model).load(game.save()).getDescription('box'),'A box. It is open.');
+test('executable description segments are rejected in worlds and saved state',()=>{
+    const model=world();
+    model.rooms.workshop.items.box.description=['A box. ',
+        {condition:{type:'itemState',item:'box',state:'container.opened'},text:'It is open.'}];
+    assert.throws(()=>createGame(model),/Invalid description/);
+    const game=createGame(world()), saved=game.save();
+    saved.rooms.workshop.items.box.description=model.rooms.workshop.items.box.description;
+    assert.throws(()=>game.load(saved),/Invalid description/);
+    assert.equal(game.getDescription('box'),'The box is closed.');
 });
 
 test('named description arrays select one variant with stable IDs and a required default',()=>{
