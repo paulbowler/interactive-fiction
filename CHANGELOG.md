@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.2
+
+- Honor custom object article phrases such as `a set of` and `a pair of`, falling back to automatic `a`/`an` when omitted.
+- Keep the full article phrase outside clickable item names in room listings and generated prose.
+- Document article overrides and verify rendering, nested contents, and save/load compatibility.
+
 ## 3.2.1
 
 - Add optional `clock.startTime` for a 24-hour game clock and `clock.deadline` for a named failure ending at the next occurrence of a time of day.

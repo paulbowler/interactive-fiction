@@ -1,12 +1,11 @@
-# Interactive Fiction v3.2.1
+# Interactive Fiction v3.2.2
 
-Configure the game clock and an optional failure deadline directly in game JSON.
+Fix custom object articles in generated descriptions and browser listings.
 
-- `clock.startTime` sets the initial 24-hour time, for example `"23:00"`.
-- `clock.deadline: {"time": "05:00", "ending": "out-of-time"}` triggers an existing ending when the next 05:00 is reached or passed. A deadline requires `startTime`.
-- The display wraps at midnight; timers and notices continue to use elapsed minutes.
-- Deadlines run before normal ending checks and scheduled world updates. Already completed endings remain final.
-- Browser clocks, save slots, and ending screens display the configured time; saved games retain progress.
-- Both settings are optional. World schema 2 and save format 1 are unchanged.
+An object with `"name": "fireside tools"` and `"article": "a set of"` now displays **a set of fireside tools**, with only **fireside tools** clickable.
 
-See [Clock and delayed events](https://github.com/paulbowler/interactive-fiction/blob/v3.2.1/docs/feature-reference.md#clock-and-delayed-events) for examples and deadline semantics.
+- Authored article phrases are used without a supported-value restriction; omitted or blank articles use automatic `a`/`an`.
+- `"none"` continues to omit the article. Definite action prose and bare object names retain their existing behavior.
+- World schema 2 and save format 1 are unchanged.
+
+Update both engine and browser packages to 3.2.2 and rebuild your game.

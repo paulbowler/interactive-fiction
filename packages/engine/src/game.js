@@ -1282,7 +1282,8 @@ function getContainerOpenMessage(containerKey, item) {
 
 function getItemReferenceText(itemKey, item) {
     const base = formatItemBaseName(item.name, 'indefinite', item.article);
-    const article = item.article === 'none' ? '' : (base.match(/^(?:a|an|the) /)?.[0] || '');
+    const authoredArticle = item.article?.trim();
+    const article = authoredArticle === 'none' ? '' : (authoredArticle ? `${authoredArticle} ` : (base.match(/^(?:a|an|the) /)?.[0] || ''));
     const annotation = getItemDisplayName(itemKey, item, { article: 'indefinite' }).slice(base.length);
     return `${article}[[${base.slice(article.length)}|item:${itemKey}]]${annotation}`;
 }
@@ -1314,6 +1315,7 @@ function formatItemBaseName(name, requestedArticle = 'none', authoredArticle = n
         return name;
     }
 
+    authoredArticle = authoredArticle?.trim();
     const displayName = shouldLowercaseArticleName(name, authoredArticle)
         ? name.replace(/[A-Za-z]+/g, word => /^[A-Z]{2,}$/.test(word) ? word : word.toLowerCase())
         : name;
@@ -1322,23 +1324,8 @@ function formatItemBaseName(name, requestedArticle = 'none', authoredArticle = n
         return displayName;
     }
 
-    if (authoredArticle === 'the') {
-        return `the ${displayName}`;
-    }
-
-    if (authoredArticle === 'a' || authoredArticle === 'an') {
-        return `${authoredArticle} ${displayName}`;
-    }
-
-    if (requestedArticle === 'definite') {
-        return `the ${displayName}`;
-    }
-
-    if (requestedArticle === 'indefinite') {
-        return `${getIndefiniteArticle(displayName)} ${displayName}`;
-    }
-
-    return name;
+    const article = authoredArticle || (requestedArticle === 'definite' ? 'the' : getIndefiniteArticle(displayName));
+    return `${article} ${displayName}`;
 }
 
 function shouldLowercaseArticleName(name, authoredArticle) {

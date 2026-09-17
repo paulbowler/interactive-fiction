@@ -1410,7 +1410,7 @@
         },
         "article": {
           "type": "string",
-          "description": "Grammatical article, such as a, an or the."
+          "description": "Article or phrase used in indefinite listings, such as a, an, the or a set of; none omits the article."
         },
         "detail": {
           "type": "string",

@@ -151,3 +151,24 @@ test('ordered named selections compose prose without positional authoring or sta
     game.describe('box',()=>['default','opened']);
     assert.equal(game.getDescription('box'),'A box. It is open.','item prose retains sentence spacing');
 });
+
+test('custom article phrases survive normalization and render outside item links', () => {
+    const game = createGame({title: 'Hearth', player: {room: 'study'}, rooms: {study: {items: {
+        firesideSet: {name: 'Fireside Tools', article: 'a set of', fixed: true, supporter: true,
+            items: {tongs: {name: 'tongs', article: 'a pair of', portable: true}}},
+    }}}});
+    const item = game.findItem('firesideSet').item;
+    assert.equal(game.getItemDisplayName('firesideSet', item, {article: 'indefinite'}), 'a set of fireside tools');
+    assert.equal(game.getItemReferenceText('firesideSet', item), 'a set of [[fireside tools|item:firesideSet]]');
+    assert.equal(game.getContainerContentsInlineText(item), 'a pair of tongs');
+    assert.equal(game.getContainerContentsInlineText(item, true), 'a pair of [[tongs|item:tongs]]');
+    assert.equal(game.getItemDisplayName('firesideSet', item), 'Fireside Tools');
+    assert.equal(game.getProseItemName(item), 'the fireside tools');
+    for (const [article, expected] of [[undefined, 'a'], ['a', 'a'], ['an', 'an'], ['the', 'the'], ['some', 'some'], [' a set of ', 'a set of'], ['', 'a'], ['none', '']]) {
+        const entry = {name: 'tools', article};
+        const prefix = expected ? `${expected} ` : '';
+        assert.equal(game.getItemReferenceText('tools', entry), `${prefix}[[tools|item:tools]]`);
+    }
+    game.load(JSON.parse(JSON.stringify(game.save())));
+    assert.equal(game.getItemReferenceText('firesideSet', game.findItem('firesideSet').item), 'a set of [[fireside tools|item:firesideSet]]');
+});

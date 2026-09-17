@@ -230,7 +230,7 @@ Composable flat capabilities. ID comes from the collection key. No object fields
 | `prose` | [prose](#prose) | No | Not supplied | Entity-owned named prose; no automatic fallback between owners. |
 | `imageUrl` | string | No | Not supplied | Local image asset path. Object images do not automatically get a separate browser panel. |
 | `id` | string | No | Not supplied | Persistent entity or variant ID; references remain strings. |
-| `article` | string | No | Not supplied | Grammatical article, such as a, an or the. |
+| `article` | string | No | Not supplied | Article or phrase used in indefinite listings, such as a, an, the or a set of; none omits the article. |
 | `detail` | string | No | Not supplied | Display text. |
 | `portable` | boolean | No | false | Allows taking accessible objects. |
 | `fixed` | boolean | No | false | Prevents taking; cannot combine with portable true. |

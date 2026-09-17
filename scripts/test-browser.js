@@ -36,7 +36,7 @@ try {
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
         .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
         .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
-        .replace("items: {", "items: { courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
+        .replace("items: {", "items: { firesideSet:{name:'fireside tools',article:'a set of',fixed:true,supporter:true}, courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
@@ -57,6 +57,9 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/demo/`);
     await page.locator('#start-game-button').click();
     assert.equal(await page.locator('#room-name').textContent(),'Study');
+    const firesideLink = page.getByRole('button', {name: 'fireside tools', exact: true});
+    assert.equal(await firesideLink.count(), 1);
+    assert.ok(await firesideLink.evaluate(button => button.previousSibling.textContent.endsWith('a set of ')));
     assert.equal(await page.locator('#game-clock').textContent(), '23:58');
     assert.equal(await page.locator('#game-clock').getAttribute('aria-label'), 'Time: 23:58');
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'center center');

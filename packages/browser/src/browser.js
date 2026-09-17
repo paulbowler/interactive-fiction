@@ -1237,7 +1237,8 @@ function appendExitDescription(exitElement, exitKey, exitDefinition, shouldCapit
 
 function appendInlineItemLink(parent, button, itemKey, item) {
     const base = formatItemBaseName(item.name, 'indefinite', item.article);
-    const article = item.article === 'none' ? '' : (base.match(/^(?:a|an|the) /)?.[0] || '');
+    const authoredArticle = item.article?.trim();
+    const article = authoredArticle === 'none' ? '' : (authoredArticle ? `${authoredArticle} ` : (base.match(/^(?:a|an|the) /)?.[0] || ''));
     const annotation = getItemDisplayName(itemKey, item, { article: 'indefinite' }).slice(base.length);
     if (article) parent.appendChild(document.createTextNode(article));
     button.textContent = base.slice(article.length);
