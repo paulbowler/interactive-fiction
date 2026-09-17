@@ -24,7 +24,7 @@ npm run serve
 
 Open http://localhost:8000. The last command serves the generated site locally; leave that terminal running while playing. Stop it with Ctrl+C.
 
-The game depends on the two v3.2.3 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
+The game depends on the two v3.3.0 release archives listed in `package.json`. The lockfile records their exact contents. Neither an engine checkout nor an npm account is needed to install those dependencies. Copy the template’s `.npmrc` too: it permits these directly declared archive URLs on npm 12 and later.
 
 ## 2. Understand the four files you will edit most
 

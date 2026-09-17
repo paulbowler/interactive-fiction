@@ -225,6 +225,8 @@ Custom fields are allowed and persist under runtime `properties`. A field has no
 | `lockedMessage` | Container/door Open failure message; the normal action menu does not offer Open on a locked door. |
 | `insertable` | Dictionary keyed by accepted item IDs, describing special insertion/swipe targets. Each entry can have `label` and `retain`. |
 
+`unlockLabel` on a door or container overrides the complete unlock menu label, including the action shown on its key. For example, a chained door with `key: "boltCutters"` and `unlockLabel: "Cut chain"` offers **Cut chain** on the carried cutters. The action remains `unlock`, so existing rules still apply. When omitted, labels remain **Unlock** or **Unlock [name]**.
+
 `lockMessage` and `unlockMessage` customize door feedback. The container lock handlers use standard feedback; use a report rule to adjust that response. A keyless `lockable:true` object supports manual locking/unlocking. For mechanisms operated only through special rules, do not accidentally expose a free manual Unlock option.
 
 Ordinary Put uses `accepts`, accessibility and cycle checks. An `insertable` entry takes precedence over ordinary placement for that item. The ordinary action moves the item into the target unless either its own or the entry's `retain` is true. Register an instead rule for bespoke device behavior. This supports a retained token swipe, as distinct from physically depositing a token. Dispatch `useOn` with the held item as `target` and device as `secondaryTarget`.

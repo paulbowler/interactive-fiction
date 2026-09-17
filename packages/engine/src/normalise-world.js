@@ -109,7 +109,7 @@ export function normaliseWorld(definition) {
     // its runtime properties; the author does not need that wrapper.
     const presentation = new Set(['id', 'name', 'article', 'description', 'prose', 'detail', 'imageUrl', 'imageVariants']);
     const holding = new Set(['items', 'accepts', 'insertable', 'transparent', 'takeLabel']);
-    const opening = new Set(['openable', 'opened', 'lockable', 'locked', 'key', 'openMessage', 'closeMessage', 'lockedMessage', 'unlockMessage', 'lockMessage']);
+    const opening = new Set(['openable', 'opened', 'lockable', 'locked', 'key', 'openMessage', 'closeMessage', 'lockedMessage', 'unlockMessage', 'lockMessage', 'unlockLabel']);
     const booleans = ['portable', 'fixed', 'container', 'supporter', 'door', 'openable', 'opened', 'lockable', 'locked', 'transparent', 'hidden', 'scenery', 'droppable'];
     const live = new Set(), prototypes = new Set(), references = [];
     function items(collection, path, ids) {

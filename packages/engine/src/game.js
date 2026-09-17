@@ -1405,7 +1405,7 @@ function getStandardAvailableActions(itemKey) {
 
         if (container.lockable && container.locked && !container.key &&
             (!api.isAvailable || api.isAvailable({type: 'unlock', target: itemKey}))) {
-            actions.push({ id: 'unlock', label: 'Unlock' });
+            actions.push({ id: 'unlock', label: container.unlockLabel || 'Unlock' });
         } else {
             if (container.openable) {
                 actions.push({
@@ -1425,7 +1425,7 @@ function getStandardAvailableActions(itemKey) {
 
         if (door.lockable && door.locked && !door.key &&
             (!api.isAvailable || api.isAvailable({type: 'unlock', target: itemKey}))) {
-            actions.push({ id: 'unlock', label: 'Unlock' });
+            actions.push({ id: 'unlock', label: door.unlockLabel || 'Unlock' });
         } else {
             if (door.openable && !door.locked) {
                 actions.push({
@@ -1476,7 +1476,8 @@ function getStandardAvailableActions(itemKey) {
 
     if (isPlayerOwned) {
         getKeyTargets(itemKey).forEach((target) => {
-            actions.push({ id: `unlock:${target.key}`, label: `Unlock ${target.item.name}` });
+            const lock = target.item.properties.door || target.item.properties.container;
+            actions.push({ id: `unlock:${target.key}`, label: lock.unlockLabel || `Unlock ${target.item.name}` });
         });
         const insertionTargets = getInsertionTargets(itemKey);
         getPutTargets(itemKey).forEach((target) => {

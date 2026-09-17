@@ -258,6 +258,7 @@ Composable flat capabilities. ID comes from the collection key. No object fields
 | `lockedMessage` | string | No | Not supplied | Optional feedback; ordinary engine wording when omitted. |
 | `lockMessage` | string | No | Not supplied | Door feedback override. Container handlers use standard feedback; change it with a report rule. |
 | `unlockMessage` | string | No | Not supplied | Door feedback override. Container handlers use standard feedback; change it with a report rule. |
+| `unlockLabel` | string | No | Not supplied | Complete unlock menu label, including when using a key, such as Cut chain. Defaults to Unlock or Unlock followed by the target name. |
 | `wearable` | boolean or [wearable](#wearable) | No | Not supplied | Boolean true enables wearing, or use removal settings. |
 | `connectable` | [connectable](#connectable) | No | Not supplied | Connection capability; movement disconnects owned objects. |
 | `readable` | [readable](#readable) | No | Not supplied | Enables Read, which consumes one turn; does not set a read flag. |

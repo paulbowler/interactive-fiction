@@ -12,7 +12,7 @@
     "test": "node --test test.js"
   },
   "dependencies": {
-    "@paulbowler/if-engine": "https://github.com/paulbowler/interactive-fiction/releases/download/v3.2.3/paulbowler-if-engine-3.2.3.tgz",
-    "@paulbowler/if-browser": "https://github.com/paulbowler/interactive-fiction/releases/download/v3.2.3/paulbowler-if-browser-3.2.3.tgz"
+    "@paulbowler/if-engine": "https://github.com/paulbowler/interactive-fiction/releases/download/v3.3.0/paulbowler-if-engine-3.3.0.tgz",
+    "@paulbowler/if-browser": "https://github.com/paulbowler/interactive-fiction/releases/download/v3.3.0/paulbowler-if-browser-3.3.0.tgz"
   }
 }

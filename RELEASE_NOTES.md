@@ -1,12 +1,16 @@
-# Interactive Fiction v3.2.3
+# Interactive Fiction v3.3.0
 
-Preserve object names exactly as authored when composing room lists, links and generated prose. Article selection now controls only the prefix.
+Customize unlock menu wording with the optional `unlockLabel` field on a door or container.
 
-- `"name": "Elsie", "article": "none"` displays **Elsie**, including after runtime renaming and save/load.
-- `"name": "Crown Jewels", "article": "the"` displays **the Crown Jewels**.
-- Custom prefixes also retain capitalization: `"article": "some"` displays **some Crown Jewels**.
-- Omitted or blank articles still select automatic `a`/`an`; `"none"` omits the article, including in action prose.
+For example, a chained door can use:
 
-Existing title-cased ordinary names now remain title-cased in sentences: **a Brass Key**. Author the name as `"brass key"` if you want **a brass key**. Popup titles continue to use the authored name.
+```js
+key: 'boltCutters',
+unlockLabel: 'Cut chain',
+```
 
-Update both engine and browser packages to 3.2.3 and rebuild your game. World schema 2 and save format 1 are unchanged.
+The carried cutters now offer **Cut chain** instead of **Unlock chain-locked door**. The field replaces the complete menu label. It also applies to keyless manual unlocking.
+
+The action remains `unlock`: existing controller rules, unlock messages, state changes and turn costs are unchanged. Without an override, menus continue to show **Unlock** or **Unlock [name]**.
+
+Update both engine and browser packages to 3.3.0 and rebuild your game. World schema 2 and save format 1 are unchanged.

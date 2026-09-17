@@ -88,3 +88,37 @@ test('clock startTime validates in authoring, direct engine input and saves', ()
     assert.throws(() => createGame(saved), /clock.startTime/);
   }
 });
+
+test('unlock labels customize key and manual menus without changing action semantics', () => {
+  for (const kind of ['door', 'container']) {
+    for (const keyed of [false, true]) {
+      const model = {title: 'Chain', player: {room: 'hall', carried: {
+        cutters: {name: 'bolt cutters', portable: true},
+      }}, rooms: {hall: {items: {
+        barrier: {name: 'chain-locked door', [kind]: true, openable: true, lockable: true,
+          locked: true, ...(keyed ? {key: 'cutters'} : {}), unlockLabel: 'Cut chain'},
+      }}}};
+      validateWorldData(model);
+      const game = createGame(model);
+      const owner = keyed ? 'cutters' : 'barrier';
+      const actionID = keyed ? 'unlock:barrier' : 'unlock';
+      const label = () => game.getAvailableActions(owner).find(action => action.id === actionID)?.label;
+      assert.equal(label(), 'Cut chain');
+      game.load(JSON.parse(JSON.stringify(game.save())));
+      assert.equal(label(), 'Cut chain');
+      let after = 0;
+      game.after('unlock', 'barrier', () => { after++; });
+      assert.equal(game.dispatch({type: actionID, target: owner}).success, true);
+      assert.equal(after, 1);
+      assert.equal(game.findItem('barrier').item.properties[kind].locked, false);
+      assert.equal(game.state.player.elapsedMinutes, 1);
+      assert.equal(label(), undefined);
+      delete model.rooms.hall.items.barrier.unlockLabel;
+      const ordinary = createGame(model);
+      assert.equal(ordinary.getAvailableActions(owner).find(action => action.id === actionID).label,
+        keyed ? 'Unlock chain-locked door' : 'Unlock');
+      model.rooms.hall.items.barrier.unlockLabel = 42;
+      assert.throws(() => validateWorldData(model), /unlockLabel/);
+    }
+  }
+});

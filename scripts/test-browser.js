@@ -34,6 +34,7 @@ try {
 `));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
+        .replace("name: 'Wooden Box',", "name: 'Wooden Box', unlockLabel: 'Release box latch',")
         .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
         .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
         .replace("items: {", "items: { jewels:{name:'Crown Jewels',article:'some',fixed:true}, elsie:{name:'Elsie',article:'none',npc:{talk:{message:'Hello.'}}}, firesideSet:{name:'fireside tools',article:'a set of',fixed:true,supporter:true}, courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
@@ -81,7 +82,7 @@ try {
     await action('#player-gear-items','Parcel','Give to Courier');
     await action('#items','Brass Key','Take');
     await page.locator('#player-gear-toggle').click();
-    await action('#player-gear-items','Brass Key','Unlock Wooden Box');
+    await action('#player-gear-items','Brass Key','Release box latch');
     // The browser closes the gear drawer after using an inventory item.
     await action('#items','Wooden Box','Open');
     await action('#items','Letter','Take Out');

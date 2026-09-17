@@ -1544,6 +1544,11 @@
           "type": "string",
           "description": "Door feedback override. Container handlers use standard feedback; change it with a report rule."
         },
+        "unlockLabel": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "Complete unlock menu label, including when using a key, such as Cut chain. Defaults to Unlock or Unlock followed by the target name."
+        },
         "wearable": {
           "description": "Boolean true enables wearing, or use removal settings.",
           "oneOf": [
@@ -2236,6 +2241,40 @@
           ]
         },
         "lockMessage": {
+          "anyOf": [
+            {
+              "required": [
+                "container"
+              ],
+              "properties": {
+                "container": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "supporter"
+              ],
+              "properties": {
+                "supporter": {
+                  "const": true
+                }
+              }
+            },
+            {
+              "required": [
+                "door"
+              ],
+              "properties": {
+                "door": {
+                  "const": true
+                }
+              }
+            }
+          ]
+        },
+        "unlockLabel": {
           "anyOf": [
             {
               "required": [

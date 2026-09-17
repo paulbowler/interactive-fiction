@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0
+
+- Add optional `unlockLabel` on doors and containers to customize the complete unlock menu label, including actions offered on their keys.
+- Preserve standard unlock behavior, action IDs, controller rules and default labels when no override is supplied.
+- Document and validate the field; cover key and manual menus, save/load, and browser interactions.
+
 ## 3.2.3
 
 - Preserve authored object name capitalization in listings, links and generated prose, regardless of article.
