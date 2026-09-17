@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.3
+
+- Preserve authored object name capitalization in listings, links and generated prose, regardless of article.
+- Honor `article: "none"` in action prose and preserve runtime NPC names through save/load.
+- Article selection only controls the prefix; use lowercase ordinary object names where lowercase prose is desired.
+
 ## 3.2.2
 
 - Honor custom object article phrases such as `a set of` and `a pair of`, falling back to automatic `a`/`an` when omitted.

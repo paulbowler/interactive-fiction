@@ -158,17 +158,62 @@ test('custom article phrases survive normalization and render outside item links
             items: {tongs: {name: 'tongs', article: 'a pair of', portable: true}}},
     }}}});
     const item = game.findItem('firesideSet').item;
-    assert.equal(game.getItemDisplayName('firesideSet', item, {article: 'indefinite'}), 'a set of fireside tools');
-    assert.equal(game.getItemReferenceText('firesideSet', item), 'a set of [[fireside tools|item:firesideSet]]');
+    assert.equal(game.getItemDisplayName('firesideSet', item, {article: 'indefinite'}), 'a set of Fireside Tools');
+    assert.equal(game.getItemReferenceText('firesideSet', item), 'a set of [[Fireside Tools|item:firesideSet]]');
     assert.equal(game.getContainerContentsInlineText(item), 'a pair of tongs');
     assert.equal(game.getContainerContentsInlineText(item, true), 'a pair of [[tongs|item:tongs]]');
     assert.equal(game.getItemDisplayName('firesideSet', item), 'Fireside Tools');
-    assert.equal(game.getProseItemName(item), 'the fireside tools');
+    assert.equal(game.getProseItemName(item), 'the Fireside Tools');
     for (const [article, expected] of [[undefined, 'a'], ['a', 'a'], ['an', 'an'], ['the', 'the'], ['some', 'some'], [' a set of ', 'a set of'], ['', 'a'], ['none', '']]) {
         const entry = {name: 'tools', article};
         const prefix = expected ? `${expected} ` : '';
         assert.equal(game.getItemReferenceText('tools', entry), `${prefix}[[tools|item:tools]]`);
     }
     game.load(JSON.parse(JSON.stringify(game.save())));
-    assert.equal(game.getItemReferenceText('firesideSet', game.findItem('firesideSet').item), 'a set of [[fireside tools|item:firesideSet]]');
+    assert.equal(game.getItemReferenceText('firesideSet', game.findItem('firesideSet').item), 'a set of [[Fireside Tools|item:firesideSet]]');
+});
+
+test('article none preserves runtime NPC names in listings, prose and saves', () => {
+    const game = createGame({title: 'Names', player: {room: 'hall'}, rooms: {hall: {items: {
+        elsie: {name: 'Young Woman', npc: {talk: {message: 'Hello.'}}},
+    }}}});
+    game.instead('talk', 'elsie', ctx => {
+        ctx.set('elsie', 'name', 'Elsie');
+        ctx.set('elsie', 'article', 'none');
+        ctx.commit();
+        return 'HANDLED';
+    });
+    assert.equal(game.dispatch({type: 'talk', target: 'elsie'}).success, true);
+    const checkName = () => {
+        const item = game.findItem('elsie').item;
+        assert.equal(game.getItemDisplayName('elsie', item, {article: 'indefinite'}), 'Elsie');
+        assert.equal(game.getItemReferenceText('elsie', item), '[[Elsie|item:elsie]]');
+        assert.equal(game.getProseItemName(item), 'Elsie');
+    };
+    checkName();
+    game.load(JSON.parse(JSON.stringify(game.save())));
+    checkName();
+    assert.equal(game.formatItemBaseName('Dr McKay', 'indefinite', ' none '), 'Dr McKay');
+    assert.equal(game.formatItemBaseName('Brass Key', 'indefinite'), 'a Brass Key');
+});
+
+test('articles only add prefixes and never change authored capitalization', () => {
+    const game = createGame(world());
+    for (const [name, article, expected] of [
+        ['Crown Jewels', 'the', 'the Crown Jewels'],
+        ['Crown Jewels', 'some', 'some Crown Jewels'],
+        ['Crown Jewels', 'a set of', 'a set of Crown Jewels'],
+        ['Elsie', 'none', 'Elsie'],
+        ['Brass Key', undefined, 'a Brass Key'],
+        ['brass key', undefined, 'a brass key'],
+        ['Emerald', '', 'an Emerald'],
+        ['iPhone', 'an', 'an iPhone'],
+        ['Dr McKay', 'none', 'Dr McKay'],
+    ]) {
+        const item = {name, article};
+        assert.equal(game.getItemDisplayName('object', item, {article: 'indefinite'}), expected);
+        assert.equal(game.getItemReferenceText('object', item), expected.replace(name, `[[${name}|item:object]]`));
+        assert.equal(game.getProseItemName(item), article === 'none' ? name : `the ${name}`);
+        assert.equal(game.getItemDisplayName('object', item), name);
+    }
 });

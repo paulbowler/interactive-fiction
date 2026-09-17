@@ -1,11 +1,12 @@
-# Interactive Fiction v3.2.2
+# Interactive Fiction v3.2.3
 
-Fix custom object articles in generated descriptions and browser listings.
+Preserve object names exactly as authored when composing room lists, links and generated prose. Article selection now controls only the prefix.
 
-An object with `"name": "fireside tools"` and `"article": "a set of"` now displays **a set of fireside tools**, with only **fireside tools** clickable.
+- `"name": "Elsie", "article": "none"` displays **Elsie**, including after runtime renaming and save/load.
+- `"name": "Crown Jewels", "article": "the"` displays **the Crown Jewels**.
+- Custom prefixes also retain capitalization: `"article": "some"` displays **some Crown Jewels**.
+- Omitted or blank articles still select automatic `a`/`an`; `"none"` omits the article, including in action prose.
 
-- Authored article phrases are used without a supported-value restriction; omitted or blank articles use automatic `a`/`an`.
-- `"none"` continues to omit the article. Definite action prose and bare object names retain their existing behavior.
-- World schema 2 and save format 1 are unchanged.
+Existing title-cased ordinary names now remain title-cased in sentences: **a Brass Key**. Author the name as `"brass key"` if you want **a brass key**. Popup titles continue to use the authored name.
 
-Update both engine and browser packages to 3.2.2 and rebuild your game.
+Update both engine and browser packages to 3.2.3 and rebuild your game. World schema 2 and save format 1 are unchanged.

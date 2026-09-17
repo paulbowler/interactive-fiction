@@ -1410,7 +1410,7 @@
         },
         "article": {
           "type": "string",
-          "description": "Article or phrase used in indefinite listings, such as a, an, the or a set of; none omits the article."
+          "description": "Article or phrase used in indefinite listings, such as a, an, the or a set of; none omits the article. Name capitalization is always preserved."
         },
         "detail": {
           "type": "string",

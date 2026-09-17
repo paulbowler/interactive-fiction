@@ -44,7 +44,7 @@ This reference covers the built-in feature families in platform 3.1. Read [World
 | Room `observations` | Named `{id, text}` entries; report a false-to-true `cue` availability change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
 | Room `imageVariants` | Ordered `{id, imageUrl, imagePosition?}` array; the first variant allowed by the `image` query supplies the image |
-| Object `name`, `article` | Name and article or phrase (`a`, `an`, `the`, `a set of`); `none` omits the article. Keep articles out of names where possible |
+| Object `name`, `article` | Name and article or phrase (`a`, `an`, `the`, `a set of`); `none` omits the article. Name capitalization is always preserved exactly as authored; use lowercase names for ordinary objects and capitals for proper names. Keep articles out of names where possible |
 | Entity `prose` | Optional named text catalog on a room, object, actor, scenery feature or transport; selection belongs in the controller. Object prose stays on the entity at runtime, alongside `description`, and travels with it. |
 | Object `description`, `detail` | String or named-variant description and additional examination detail string |
 | Scenery `name`, `title`, `description` | Inline name, optional examination title (falls back to name), and string or named-variant description; room scenery is examinable but cannot be carried |

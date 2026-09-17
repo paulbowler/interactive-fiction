@@ -1307,7 +1307,8 @@ function getItemDisplayName(itemKey, item, options = {}) {
 }
 
 function getProseItemName(item) {
-    return formatItemBaseName(item?.name || 'item', 'definite', item?.article === 'the' ? 'the' : null);
+    const article = item?.article?.trim();
+    return formatItemBaseName(item?.name || 'item', 'definite', article === 'the' || article === 'none' ? article : null);
 }
 
 function formatItemBaseName(name, requestedArticle = 'none', authoredArticle = null) {
@@ -1316,24 +1317,12 @@ function formatItemBaseName(name, requestedArticle = 'none', authoredArticle = n
     }
 
     authoredArticle = authoredArticle?.trim();
-    const displayName = shouldLowercaseArticleName(name, authoredArticle)
-        ? name.replace(/[A-Za-z]+/g, word => /^[A-Z]{2,}$/.test(word) ? word : word.toLowerCase())
-        : name;
-
     if (authoredArticle === 'none') {
-        return displayName;
+        return name;
     }
 
-    const article = authoredArticle || (requestedArticle === 'definite' ? 'the' : getIndefiniteArticle(displayName));
-    return `${article} ${displayName}`;
-}
-
-function shouldLowercaseArticleName(name, authoredArticle) {
-    if (authoredArticle === 'the') {
-        return false;
-    }
-
-    return /^[A-Z][a-z]/.test(name);
+    const article = authoredArticle || (requestedArticle === 'definite' ? 'the' : getIndefiniteArticle(name));
+    return `${article} ${name}`;
 }
 
 function getIndefiniteArticle(text) {
@@ -2312,7 +2301,6 @@ const api = {
     getItemDisplayName,
     getProseItemName,
     formatItemBaseName,
-    shouldLowercaseArticleName,
     getIndefiniteArticle,
     getAvailableActions,
     getPutTargets,

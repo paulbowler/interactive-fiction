@@ -36,7 +36,7 @@ try {
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
         .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
         .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
-        .replace("items: {", "items: { firesideSet:{name:'fireside tools',article:'a set of',fixed:true,supporter:true}, courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
+        .replace("items: {", "items: { jewels:{name:'Crown Jewels',article:'some',fixed:true}, elsie:{name:'Elsie',article:'none',npc:{talk:{message:'Hello.'}}}, firesideSet:{name:'fireside tools',article:'a set of',fixed:true,supporter:true}, courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
     const dist=path.join(project,'dist');
@@ -57,6 +57,10 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/demo/`);
     await page.locator('#start-game-button').click();
     assert.equal(await page.locator('#room-name').textContent(),'Study');
+    assert.equal(await page.getByRole('button', {name: 'Elsie', exact: true}).count(), 1);
+    const jewelsLink = page.getByRole('button', {name: 'Crown Jewels', exact: true});
+    assert.equal(await jewelsLink.count(), 1);
+    assert.ok(await jewelsLink.evaluate(button => button.previousSibling.textContent.endsWith('some ')));
     const firesideLink = page.getByRole('button', {name: 'fireside tools', exact: true});
     assert.equal(await firesideLink.count(), 1);
     assert.ok(await firesideLink.evaluate(button => button.previousSibling.textContent.endsWith('a set of ')));
@@ -71,16 +75,16 @@ try {
         await page.locator('#item-actions').getByRole('button',{name:label,exact:true}).click();
         if(await page.locator('#messageModal').isVisible()) await page.locator('#messageModal .close').click();
     };
-    await action('#items','courier','Talk to');
-    await action('#items','parcel','Take');
+    await action('#items','Courier','Talk to');
+    await action('#items','Parcel','Take');
     await page.locator('#player-gear-toggle').click();
     await action('#player-gear-items','Parcel','Give to Courier');
-    await action('#items','brass key','Take');
+    await action('#items','Brass Key','Take');
     await page.locator('#player-gear-toggle').click();
     await action('#player-gear-items','Brass Key','Unlock Wooden Box');
     // The browser closes the gear drawer after using an inventory item.
-    await action('#items','wooden box','Open');
-    await action('#items','letter','Take Out');
+    await action('#items','Wooden Box','Open');
+    await action('#items','Letter','Take Out');
     await page.locator('#wait-button').click();
     const state=()=>page.evaluate(async()=>{
         const {browserView}=await import(document.querySelector('script[type="module"]').src);
