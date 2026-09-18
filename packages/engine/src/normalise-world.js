@@ -31,6 +31,26 @@ export function validateExitDoors(world, reference = world) {
     }
 }
 
+// Arrival views reference rooms, without embedding story conditions in model data.
+export function validateArrivalImages(world) {
+    const rooms = world.rooms || {};
+    const previous = world.player?.previousRoom;
+    if (previous !== undefined && previous !== null &&
+        (typeof previous !== 'string' || !Object.hasOwn(rooms, previous)))
+        throw new Error('Invalid world at player.previousRoom: expected null or an existing room ID');
+    for (const [id, room] of Object.entries(rooms)) {
+        if (room?.imageFrom === undefined) continue;
+        const path = `rooms.${id}.imageFrom`;
+        if (!room.imageFrom || typeof room.imageFrom !== 'object' || Array.isArray(room.imageFrom))
+            throw new Error(`Invalid world at ${path}: expected a map of room IDs to image paths`);
+        for (const [from, image] of Object.entries(room.imageFrom)) {
+            if (!Object.hasOwn(rooms, from)) throw new Error(`Invalid world at ${path}.${from}: unknown room`);
+            if (typeof image !== 'string' || !image.trim())
+                throw new Error(`Invalid world at ${path}.${from}: expected a nonempty image path`);
+        }
+    }
+}
+
 const validTime = value => typeof value === 'string' && value.length === 5 && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value);
 export const timeOfDayMinutes = value => {
     const [hours, minutes] = value.split(':').map(Number);
@@ -78,6 +98,7 @@ export function normaliseWorld(definition) {
     }
     validateWorldDescriptions(world);
     validateClock(world);
+    validateArrivalImages(world);
     if (world.schemaVersion !== undefined && world.schemaVersion !== 2) fail('schemaVersion', 'Unsupported world schema version');
     if (world.player?.currentRoom !== undefined && world.player.room === undefined) { validateTransports(world); validateExitDoors(world); return world; }
     if (typeof world.title !== 'string' || !world.title.trim()) fail('title', 'expected a nonempty string');

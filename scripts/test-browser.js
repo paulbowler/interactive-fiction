@@ -32,11 +32,12 @@ try {
             return 'HANDLED';
         });
 `));
+    await fs.copyFile(path.join(project,'assets/study.svg'), path.join(project,'assets/study-from-hall.svg'));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
         .replace("name: 'Wooden Box',", "name: 'Wooden Box', unlockLabel: 'Release box latch',")
         .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
-        .replace("name: 'Study',", "name: 'Study', scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
+        .replace("name: 'Study',", "name: 'Study', imageFrom:{hall:'./assets/study-from-hall.svg'}, scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
         .replace("items: {", "items: { jewels:{name:'Crown Jewels',article:'some',fixed:true}, elsie:{name:'Elsie',article:'none',npc:{talk:{message:'Hello.'}}}, firesideSet:{name:'fireside tools',article:'a set of',fixed:true,supporter:true}, courier:{name:'Courier', npc:{talk:{message:'Not now.'},give:{message:'No thanks.'}},prose:{accepted:'I will deliver it.'}}, parcel:{name:'Parcel',portable:true},")
         .replace('A wooden box rests beside a brass key.', 'A wooden box rests beside a brass key. A [[mural]] covers the wall.'));
     run('npm',['run','build'],project);
@@ -71,6 +72,16 @@ try {
     await page.locator('#room-description').getByRole('button',{name:'mural',exact:true}).click();
     assert.ok((await page.locator('#messageModal').textContent()).includes('A painted ship.'));
     await page.locator('#messageModal .close').click();
+    await page.evaluate(async () => {
+        const {browserView} = await import(document.querySelector('script[type="module"]').src);
+        if (!browserView.collectGameImageUrls(browserView.game.state).includes('./assets/study-from-hall.svg'))
+            throw new Error('Arrival image missing from preload list');
+        browserView.game.dispatch({type:'go', target:'hall'});
+        browserView.game.dispatch({type:'go', target:'study'});
+    });
+    await page.waitForFunction(() => document.querySelector('#room-image').getAttribute('src') === './assets/study-from-hall.svg');
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('#room-image').getAttribute('src') === './assets/study-from-hall.svg');
     const action=async(region,item,label)=>{
         await page.locator(region).getByRole('button',{name:item,exact:true}).click();
         await page.locator('#item-actions').getByRole('button',{name:label,exact:true}).click();
@@ -118,6 +129,22 @@ try {
     assert.equal(await page.locator('#room-image').evaluate(img=>img.style.objectPosition),'right bottom');
     assert.equal((await page.locator('#room-description').textContent()).trim(), 'Dusk gathers beyond the study window.');
     assert.ok(await page.locator('#room-image').evaluate(img=>img.complete&&img.naturalWidth>0));
+    // The alternate view also renders from the offline cache after restoring a save.
+    await page.evaluate(async () => {
+        const {browserView} = await import(document.querySelector('script[type="module"]').src);
+        if (browserView.game.state.player.previousRoom !== 'hall') throw new Error('Arrival lost on restore');
+        browserView.game.state.player.dusk = false;
+        browserView.updateView();
+    });
+    await page.waitForFunction(() => {
+        const img = document.querySelector('#room-image');
+        return img.getAttribute('src') === './assets/study-from-hall.svg' && img.complete && img.naturalWidth > 0;
+    });
+    await page.evaluate(async () => {
+        const {browserView} = await import(document.querySelector('script[type="module"]').src);
+        browserView.game.state.player.dusk = true;
+        browserView.updateView();
+    });
     await page.locator('#game-menu-button').click();
     await page.locator('[data-save-slots]').click();
     await page.getByRole('button', {name: 'Save slot 1', exact: true}).click();

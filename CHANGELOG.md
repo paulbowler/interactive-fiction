@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.0
+
+- Add room `imageFrom` maps for automatic arrival views without controller code.
+- Track and save `player.previousRoom` after completed room changes, including deferred travel and engine relocation.
+- Preserve image-variant precedence, default fallback, and legacy saves; validate and preload arrival images for offline builds.
+
 ## 3.3.0
 
 - Add optional `unlockLabel` on doors and containers to customize the complete unlock menu label, including actions offered on their keys.

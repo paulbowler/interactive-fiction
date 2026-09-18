@@ -172,6 +172,7 @@ Player initial state; owned objects are definitions, not lists of IDs.
 | `worn` | [items](#items) | No | Not supplied | Object definitions keyed by persistent ID; nested declarations establish ownership. |
 | `visitedRooms` | dictionary of `true` | No | Not supplied | Optional previously visited room IDs; current room is marked on initialization. |
 | `currentRoom` | Not supported | Forbidden | Not supplied |  |
+| `previousRoom` | string,null | No | null | Previous room ID, tracked automatically after successful room changes and saved. Null before the first arrival. |
 
 ## room
 
@@ -188,6 +189,7 @@ Room definition; name and description recommended, empty items/exits inferred.
 | `exits` | dictionary of [exit](#exit) | No | Not supplied | Destination room IDs mapped to exits. |
 | `scenery` | dictionary of [scenery](#scenery) | No | Not supplied | Room-local features; IDs cannot contain a colon. |
 | `clues` | Not supported | Forbidden | Not supplied |  |
+| `imageFrom` | dictionary of string | No | Not supplied | Arrival views: map source room IDs to local image paths. Selected imageVariants override these views; unmatched arrivals use imageUrl. Uses the room imagePosition. |
 
 ## exit
 

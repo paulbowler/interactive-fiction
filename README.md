@@ -3,7 +3,7 @@
 For field types, required/optional attributes and defaults, see the [attribute reference](docs/model-attributes.md) and [schema guide](docs/schema.md).
 
 
-Reusable JavaScript packages for standalone point-and-click games. **Version 3.3.0 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
+Reusable JavaScript packages for standalone point-and-click games. **Version 3.4.0 · MIT · Node.js 22+ tooling · No browser runtime dependencies.**
 
 | Package | Purpose |
 | --- | --- |
@@ -59,7 +59,7 @@ Ordinary taking, dropping, containers, locks, inventory and movement need world 
 Packages are distributed as npm-compatible archives on [GitHub Releases](https://github.com/paulbowler/interactive-fiction/releases). No npm registry account is needed to consume them. The template’s `.npmrc` permits its declared release URLs on npm 12 and later.
 
 ```sh
-npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v3.3.0/paulbowler-if-engine-3.3.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v3.3.0/paulbowler-if-browser-3.3.0.tgz
+npm install --save-exact --allow-remote=root https://github.com/paulbowler/interactive-fiction/releases/download/v3.4.0/paulbowler-if-engine-3.4.0.tgz https://github.com/paulbowler/interactive-fiction/releases/download/v3.4.0/paulbowler-if-browser-3.4.0.tgz
 ```
 
 For an upgrade, install both archives for the desired release, run the game's tests, rebuild and redeploy. Commit the updated package and lock files. Existing deployments keep their installed release until redeployed. Keep the previous `dist` or source/lockfile release to roll back.

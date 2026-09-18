@@ -43,6 +43,7 @@ This reference covers the built-in feature families in platform 3.1. Read [World
 | Room `cues` | Named `{id, text}` entries shown while their read-only `cue` availability predicate allows them |
 | Room `observations` | Named `{id, text}` entries; report a false-to-true `cue` availability change across the current turn's scheduler update, while the player stays in that room |
 | Room `imageUrl`, `imagePosition` | Default illustration |
+| Room `imageFrom` | Optional map of source room IDs to local image paths; automatically selects the arrival view |
 | Room `imageVariants` | Ordered `{id, imageUrl, imagePosition?}` array; the first variant allowed by the `image` query supplies the image |
 | Object `name`, `article` | Name and article or phrase (`a`, `an`, `the`, `a set of`); `none` omits the article. Name capitalization is always preserved exactly as authored; use lowercase names for ordinary objects and capitals for proper names. Keep articles out of names where possible |
 | Entity `prose` | Optional named text catalog on a room, object, actor, scenery feature or transport; selection belongs in the controller. Object prose stays on the entity at runtime, alongside `description`, and travels with it. |
@@ -539,3 +540,19 @@ Controller helpers do not independently enforce every player-action restriction 
 - `createExit({from?,target,before,after})`: create a connection with display parts; for richer exit data assign the full declarative exit in a rule and validate it.
 
 For new clients, use query methods and dispatch from [API](api.md), rather than low-level handlers. For new engine semantics, follow the [extension checklist](extending.md).
+
+### Arrival views
+
+Rooms can provide different views depending on where the player entered from, without controller code:
+
+```js
+imageUrl: './images/gallery.webp',
+imageFrom: {
+  entranceHall: './images/gallery-from-hall.webp',
+  courtyard: './images/gallery-from-courtyard.webp',
+},
+```
+
+Use existing room IDs as keys. The engine records `player.previousRoom` on successful room changes, before arrival events. Failed movement does not change it; deferred movement updates it when completed. Waiting, examination and same-room movement preserve the arrival view. Engine-driven relocation also tracks the previous room. Custom code that directly changes `player.currentRoom` must maintain `previousRoom` itself.
+
+A controller-selected `imageVariants` entry takes precedence; otherwise the matching `imageFrom` image is used, then `imageUrl`. Arrival views use the room's `imagePosition`. The starting room and older saves without arrival history use the default (unless a controller variant applies). Arrival history is saved, so reloading preserves the view. All declared arrival images are checked during builds and included in preloading and offline caching. When inspecting an image for a room other than the current room, arrival history is not applied.

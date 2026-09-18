@@ -221,6 +221,8 @@ predicates after creating a runtime that will load saved progress.
 
 ### Navigation and exit text
 
+`ctx.state.player.previousRoom` holds the room left on the latest completed room change, or `null` before any arrival. The value persists in saves and is available when `playerEnteredRoom` fires. Room `imageFrom` maps use it automatically; see [Arrival views](feature-reference.md#arrival-views).
+
 An exit's optional `door` is the ID of a live door object. The engine blocks
 travel when it is locked, or when it is openable and closed. The door's
 `lockedMessage` supplies custom blocking text. Declare the same reference on

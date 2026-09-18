@@ -110,12 +110,17 @@ export async function buildGame({ cwd = process.cwd(), configPath = 'if.config.j
         html = html.replace('</head>', `    <script type="importmap">${imports}</script>\n</head>`);
         await fs.writeFile(path.join(staging,'index.html'),html);
         // Fail the build if a declared image will be missing offline.
+        async function validateImage(child) {
+            if (/^(?:[a-z]+:|\/)/i.test(child) || child.split('/').includes('..')) throw new Error(`Assets must be local project paths: ${child}`);
+            await fs.access(path.join(staging, child.split(/[?#]/)[0]));
+        }
         async function validateAssets(value) {
             if (!value || typeof value !== 'object') return;
             for (const [key, child] of Object.entries(value)) {
                 if (key === 'imageUrl' && typeof child === 'string' && child) {
-                    if (/^(?:[a-z]+:|\/)/i.test(child) || child.split('/').includes('..')) throw new Error(`Assets must be local project paths: ${child}`);
-                    await fs.access(path.join(staging, child.split(/[?#]/)[0]));
+                    await validateImage(child);
+                } else if (key === 'imageFrom' && child && typeof child === 'object') {
+                    for (const image of Object.values(child)) await validateImage(image);
                 } else await validateAssets(child);
             }
         }

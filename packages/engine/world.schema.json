@@ -381,7 +381,15 @@
           },
           "description": "Room-local features; IDs cannot contain a colon."
         },
-        "clues": false
+        "clues": false,
+        "imageFrom": {
+          "type": "object",
+          "description": "Arrival views: map source room IDs to local image paths. Selected imageVariants override these views; unmatched arrivals use imageUrl. Uses the room imagePosition.",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "\\S"
+          }
+        }
       },
       "additionalProperties": true
     },
@@ -1377,7 +1385,15 @@
           },
           "description": "Optional previously visited room IDs; current room is marked on initialization."
         },
-        "currentRoom": false
+        "currentRoom": false,
+        "previousRoom": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Previous room ID, tracked automatically after successful room changes and saved. Null before the first arrival.",
+          "default": null
+        }
       },
       "additionalProperties": true,
       "required": [

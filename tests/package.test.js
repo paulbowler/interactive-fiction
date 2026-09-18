@@ -50,6 +50,12 @@ test('release archives install into an independent project, preserve saves and b
     await fs.writeFile(worldFile,JSON.stringify(invalid));
     await assert.rejects(buildGame({cwd:game}),/game.json5.*accepts.*array/);
     assert.equal(await fs.readFile(path.join(game,'dist/data/game.json'),'utf8'),JSON.stringify(compiled,null,2)+'\n');
+    for (const image of ['./assets/missing-arrival.svg', 'https://example.com/view.svg', '../outside.svg']) {
+        const invalidImage = JSON5.parse(authored);
+        invalidImage.rooms.study.imageFrom = {hall: image};
+        await fs.writeFile(worldFile,JSON.stringify(invalidImage));
+        await assert.rejects(buildGame({cwd:game}), /ENOENT|Assets must be local/);
+    }
     await fs.writeFile(worldFile,authored);
     const config=JSON.parse(await fs.readFile(path.join(game,'if.config.json')));
     await fs.writeFile(path.join(game,'if.config.json'),JSON.stringify({...config,outDir:'src'}));

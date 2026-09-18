@@ -110,8 +110,9 @@ function syncSavedPresentation(model, freshModel) {
     model.startScreen = cloneModel(freshModel.startScreen);
     for (const [roomKey, room] of Object.entries(freshModel.rooms)) {
         if (!model.rooms[roomKey]) continue;
-        for (const field of ['imageUrl', 'imagePosition', 'imageVariants']) {
+        for (const field of ['imageUrl', 'imagePosition', 'imageVariants', 'imageFrom']) {
             if (room[field] !== undefined) model.rooms[roomKey][field] = cloneModel(room[field]);
+            else if (field === 'imageFrom') delete model.rooms[roomKey][field];
         }
     }
 }
@@ -776,6 +777,7 @@ function collectGameImageUrls(model) {
     addImageUrl(model?.startScreen?.imageUrl);
     Object.values(model?.rooms || {}).forEach((room) => {
         addImageUrl(room.imageUrl);
+        Object.values(room.imageFrom || {}).forEach(addImageUrl);
         (room.imageVariants || []).forEach(variant => addImageUrl(variant.imageUrl));
     });
     (model?.endings || []).forEach((ending) => addImageUrl(ending.imageUrl));

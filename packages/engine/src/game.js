@@ -3,7 +3,7 @@ import {installSocial} from './social.js';
 import {findEntity} from './entities.js';
 import { validateTransports, transportStopAt } from './transports.js';
 import { createDescriptions, validateWorldDescriptions } from './descriptions.js';
-import { normaliseWorld, validateExitDoors, validateClock, timeOfDayMinutes } from './normalise-world.js';
+import { normaliseWorld, validateExitDoors, validateClock, validateArrivalImages, timeOfDayMinutes } from './normalise-world.js';
 import { cloneSerializable, validateRuntime } from './serialization.js';
 import { createActions } from './actions.js';
 import { installDispatcher } from './dispatcher.js';
@@ -42,6 +42,7 @@ function cloneModel(model) {
 function validateWorld(model, referenceModel = model) {
     validateExitDoors(model, referenceModel);
     validateClock(model);
+    validateArrivalImages(model);
     validateWorldDescriptions(model);
     validateTransports(model);
     const object = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -297,6 +298,8 @@ function normalizePlayerState() {
         return;
     }
 
+    gameModel.player.previousRoom ??= null;
+
     if (!Number.isFinite(gameModel.player.elapsedMinutes)) {
         gameModel.player.elapsedMinutes = 0;
         gameModel.player.timedRunEligible = false;
@@ -454,6 +457,7 @@ function movePlayer(exitKey) {
 function completeMovePlayer(exitKey, exitDefinition, standingOnItemKey = null) {
     const from = gameModel.player.currentRoom;
     clearPlayerConnectableState();
+    if (from !== exitKey) gameModel.player.previousRoom = from;
     gameModel.player.currentRoom = exitKey;
     recordRoomVisit(exitKey);
     holdTransportForBoarding(exitKey);
@@ -783,7 +787,9 @@ function getTotalAchievementCount() {
 function getRoomImage(room) {
     const roomKey = Object.entries(gameModel.rooms).find(([, value]) => value === room)?.[0];
     const variant = (room.imageVariants || []).find(entry => api.isAvailable({type: 'image', target: roomKey, option: entry.id}));
-    return { imageUrl: variant?.imageUrl || room.imageUrl, imagePosition: variant?.imagePosition || room.imagePosition };
+    const arrivalImage = roomKey === gameModel.player.currentRoom && gameModel.player.previousRoom !== null
+        ? room.imageFrom?.[gameModel.player.previousRoom] : undefined;
+    return { imageUrl: variant?.imageUrl || arrivalImage || room.imageUrl, imagePosition: variant?.imagePosition || room.imagePosition };
 }
 
 function getPlayerDisplayName() {
@@ -2061,6 +2067,7 @@ function movePlayerByEffect(effect) {
 
     clearPlayerPosture();
     clearPlayerConnectableState();
+    if (gameModel.player.currentRoom !== effect.room) gameModel.player.previousRoom = gameModel.player.currentRoom;
     gameModel.player.currentRoom = effect.room;
     recordRoomVisit(effect.room);
 }

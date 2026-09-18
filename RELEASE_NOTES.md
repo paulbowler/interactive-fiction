@@ -1,16 +1,19 @@
-# Interactive Fiction v3.3.0
+# Interactive Fiction v3.4.0
 
-Customize unlock menu wording with the optional `unlockLabel` field on a door or container.
-
-For example, a chained door can use:
+Add arrival-based room images without per-game controller code:
 
 ```js
-key: 'boltCutters',
-unlockLabel: 'Cut chain',
+imageUrl: './images/gallery.webp',
+imageFrom: {
+  entranceHall: './images/gallery-from-hall.webp',
+  courtyard: './images/gallery-from-courtyard.webp',
+},
 ```
 
-The carried cutters now offer **Cut chain** instead of **Unlock chain-locked door**. The field replaces the complete menu label. It also applies to keyless manual unlocking.
+The engine automatically tracks the room you came from in `player.previousRoom`, preserving it through other actions and save/load. Failed moves do not change the view; deferred moves update it only when completed.
 
-The action remains `unlock`: existing controller rules, unlock messages, state changes and turn costs are unchanged. Without an override, menus continue to show **Unlock** or **Unlock [name]**.
+A selected controller image variant takes priority, followed by the matching arrival view, then the default `imageUrl`. Arrival images use the room's `imagePosition`. Starting rooms and older saves without arrival history fall back to the default unless a controller variant applies.
 
-Update both engine and browser packages to 3.3.0 and rebuild your game. World schema 2 and save format 1 are unchanged.
+All image paths are local build assets, validated and included in browser preloading and offline caching. Map keys must identify existing rooms. Engine relocation tracks arrival too; custom code directly assigning `player.currentRoom` must also maintain `previousRoom`.
+
+Update both packages to 3.4.0 and rebuild your game. World schema 2 and save format 1 are unchanged.
