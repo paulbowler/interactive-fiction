@@ -247,6 +247,8 @@ The existing availability registry also supports these presentation queries:
 | `exit` | Source room ID | `option`: destination room ID | Whether the exit is visible |
 | `exitVariant` | Source room ID | `secondaryTarget`: destination; `option`: variant ID | Whether a named exit-text alternative applies |
 
+Exit `label` text can include one `[[clickable span]]` with surrounding prose; it overrides `before`/`after` without changing the destination. Plain labels retain their existing behavior. See [Bracketed exit labels](feature-reference.md#bracketed-exit-labels).
+
 Exit text alternatives contain an `id` and presentation fields such as `before`,
 `after` and `label`. The first allowed alternative supplies those fields;
 otherwise the initial exit text applies. Read-only queries do not execute action

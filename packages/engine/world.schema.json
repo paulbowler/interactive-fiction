@@ -295,7 +295,7 @@
         },
         "label": {
           "type": "string",
-          "description": "Overrides linked destination room name."
+          "description": "Linked destination text, or full exit wording with one [[clickable label]] span. Bracketed wording overrides before/after; the exit key still supplies the destination."
         },
         "description": {
           "type": "string",
@@ -2513,7 +2513,7 @@
         },
         "label": {
           "type": "string",
-          "description": "Display text."
+          "description": "Linked destination text, or full exit wording with one [[clickable label]] span. Bracketed wording overrides before/after; the exit key still supplies the destination."
         }
       },
       "additionalProperties": false,

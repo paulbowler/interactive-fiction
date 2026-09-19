@@ -199,7 +199,7 @@ Connection keyed by destination room ID. Empty definition is valid.
 | --- | --- | --- | --- | --- |
 | `before` | string | No | Not supplied | Text before destination link; default wording describes an exit. |
 | `after` | string | No | Not supplied | Text after destination link. |
-| `label` | string | No | Not supplied | Overrides linked destination room name. |
+| `label` | string | No | Not supplied | Linked destination text, or full exit wording with one [[clickable label]] span. Bracketed wording overrides before/after; the exit key still supplies the destination. |
 | `description` | string | No | Not supplied | Optional wording used to derive display parts; prefer before/after. |
 | `listed` | boolean | No | true | Include in automatic exit list; does not remove topology. |
 | `door` | string | No | Not supplied | Persistent entity or variant ID; references remain strings. |
@@ -755,7 +755,7 @@ Controller configuration: first eligible exit wording variant wins.
 | `id` | string | Yes | Not supplied | Persistent entity or variant ID; references remain strings. |
 | `before` | string | No | Not supplied | Display text. |
 | `after` | string | No | Not supplied | Display text. |
-| `label` | string | No | Not supplied | Display text. |
+| `label` | string | No | Not supplied | Linked destination text, or full exit wording with one [[clickable label]] span. Bracketed wording overrides before/after; the exit key still supplies the destination. |
 
 ## movementCue
 

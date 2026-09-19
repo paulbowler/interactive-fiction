@@ -33,3 +33,52 @@ test('renamed scenery and saved names resolve afresh; popup titles are independe
 test('scenery names must be nonempty strings',()=>{
     for(const name of [7,false,'','   ']){const input=world();input.rooms.gallery.scenery.lamp.name=name;assert.throws(()=>normaliseWorld(input),/scenery.lamp.name.*nonempty string/);}
 });
+
+test('bracketed exit labels supply link text and surrounding prose without changing navigation', () => {
+    const game = createGame({title: 'Carriage', player: {room: 'rear'}, rooms: {
+        rear: {exits: {front: {label: 'Back through the partition are the [[front seats]]', before: 'ignored ', after: ' ignored'}}},
+        front: {name: 'Front compartment', exits: {rear: {}}},
+    }});
+    const exit = game.state.rooms.rear.exits.front;
+    const saved = game.save();
+    for (const [label, before, link, after] of [
+        ['Back through the partition are the [[front seats]]', 'Back through the partition are the ', 'front seats', ''],
+        ['[[Front seats]] are back through the partition', '', 'Front seats', ' are back through the partition'],
+        ['Go through the [[partition]] to the front seats', 'Go through the ', 'partition', ' to the front seats'],
+        ['[[front seats]]', '', 'front seats', ''],
+    ]) {
+        const rendered = game.getExitDisplayDefinition({...exit, label}, 'Front compartment');
+        assert.deepEqual([rendered.before, rendered.label, rendered.after], [before, link, after]);
+        assert.equal(game.buildExitText('front', {...exit, label}), before + link + after);
+    }
+    assert.deepEqual(game.save(), saved, 'rendering leaves authored exit state unchanged');
+    game.load(JSON.parse(JSON.stringify(saved)));
+    assert.equal(game.buildExitText('front', game.state.rooms.rear.exits.front), 'Back through the partition are the front seats');
+    assert.equal(game.dispatch({type: 'go', target: 'front'}).success, true);
+    assert.equal(game.state.player.currentRoom, 'front');
+    assert.equal(game.buildExitText('front', {label: 'front seats'}), 'the exit to front seats is open');
+    assert.equal(game.buildExitText('front', {label: 'front seats', before: 'Go to '}), 'Go to front seats');
+    assert.equal(game.buildExitText('front', {label: 'front seats', after: ' are ahead'}), 'front seats are ahead');
+    assert.equal(game.buildExitText('front', {}), 'the exit to Front compartment is open');
+    for (const label of ['unfinished [[front seats', '[[]]', '[[one]] and [[two]]']) {
+        assert.equal(game.getExitDisplayDefinition({label}, 'Front compartment').label, label);
+    }
+});
+
+test('selected exit variants can supply bracketed wording and retain exit rules', () => {
+    const game = createGame({title: 'Carriage', player: {room: 'rear'}, rooms: {
+        rear: {exits: {front: {label: 'the [[front seats]]', listed: false, variants: [
+            {id: 'clear', label: 'Beyond the [[partition]] are the front seats'},
+        ]}}}, front: {},
+    }});
+    game.available('exitVariant', 'rear', ctx => ctx.state.player.clear === true);
+    const exit = game.state.rooms.rear.exits.front;
+    assert.equal(game.buildExitText('front', exit), 'the front seats');
+    game.state.player.clear = true;
+    const result = game.getExitDisplayDefinition(exit, 'front');
+    assert.equal(result.label, 'partition');
+    assert.equal(result.before, 'Beyond the ');
+    assert.equal(result.after, ' are the front seats');
+    assert.equal(result.listed, false);
+    assert.equal(exit.label, 'the [[front seats]]');
+});

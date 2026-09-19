@@ -556,3 +556,17 @@ imageFrom: {
 Use existing room IDs as keys. The engine records `player.previousRoom` on successful room changes, before arrival events. Failed movement does not change it; deferred movement updates it when completed. Waiting, examination and same-room movement preserve the arrival view. Engine-driven relocation also tracks the previous room. Custom code that directly changes `player.currentRoom` must maintain `previousRoom` itself.
 
 A controller-selected `imageVariants` entry takes precedence; otherwise the matching `imageFrom` image is used, then `imageUrl`. Arrival views use the room's `imagePosition`. The starting room and older saves without arrival history use the default (unless a controller variant applies). Arrival history is saved, so reloading preserves the view. All declared arrival images are checked during builds and included in preloading and offline caching. When inspecting an image for a room other than the current room, arrival history is not applied.
+
+### Bracketed exit labels
+
+An exit's `label` can contain its complete wording, with one `[[...]]` span marking the clickable text:
+
+```js
+carriageFront: {
+  label: 'Back through the partition are the [[front seats]]',
+},
+```
+
+The exit key (`carriageFront`) remains the destination. You can put prose before, after, or on both sides of the link; `label: '[[front seats]]'` displays only the link. The brackets contain display text, not an item/scenery ID or a `label|target` reference. Do not add a final full stop: the exit list supplies sentence punctuation.
+
+Bracketed wording takes precedence over `before` and `after`, including in a selected exit variant. Plain labels and existing `before`/`after` definitions retain their previous behavior. Use exactly one nonempty bracketed span; unmatched, empty, or multiple spans are treated as a plain label.

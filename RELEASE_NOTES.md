@@ -1,19 +1,15 @@
-# Interactive Fiction v3.4.0
+# Interactive Fiction v3.5.0
 
-Add arrival-based room images without per-game controller code:
+Write exit wording in one `label`, using `[[...]]` to mark the clickable words:
 
-```js
-imageUrl: './images/gallery.webp',
-imageFrom: {
-  entranceHall: './images/gallery-from-hall.webp',
-  courtyard: './images/gallery-from-courtyard.webp',
-},
+```json
+"carriageFront": {
+  "label": "Back through the partition are the [[front seats]]"
+}
 ```
 
-The engine automatically tracks the room you came from in `player.previousRoom`, preserving it through other actions and save/load. Failed moves do not change the view; deferred moves update it only when completed.
+Only **front seats** is clickable; it leads to `carriageFront`. Text may appear before, after, or on both sides of the link. `"label": "[[front seats]]"` displays just the link. The exit list supplies final punctuation.
 
-A selected controller image variant takes priority, followed by the matching arrival view, then the default `imageUrl`. Arrival images use the room's `imagePosition`. Starting rooms and older saves without arrival history fall back to the default unless a controller variant applies.
+Bracketed wording overrides `before` and `after`, including in selected exit variants. Plain labels and existing exit definitions retain their behavior. Use one nonempty bracketed span; malformed or multiple spans remain literal label text. No destination ID is needed inside the brackets.
 
-All image paths are local build assets, validated and included in browser preloading and offline caching. Map keys must identify existing rooms. Engine relocation tracks arrival too; custom code directly assigning `player.currentRoom` must also maintain `previousRoom`.
-
-Update both packages to 3.4.0 and rebuild your game. World schema 2 and save format 1 are unchanged.
+Update both packages to 3.5.0 and rebuild. World schema 2 and save format 1 are unchanged.

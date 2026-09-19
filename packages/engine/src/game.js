@@ -891,21 +891,26 @@ function getExitDisplayDefinition(exitDefinition, roomName) {
     const normalized = normalizeExitDefinition(exitDefinition, roomName) ?? {};
     const activeVariant = getActiveExitVariant(normalized, exitLocation(exitDefinition));
 
-    if (activeVariant) {
-        return {
-            ...normalized,
-            ...normalizeExitDefinition(activeVariant, roomName),
-            variants: normalized.variants
-        };
+    const display = activeVariant ? {
+        ...normalized,
+        ...normalizeExitDefinition(activeVariant, roomName),
+        variants: normalized.variants
+    } : normalized;
+
+    // The exit key supplies the destination; brackets only mark its link text.
+    const bracketed = typeof display.label === 'string'
+        ? display.label.match(/^([^\[\]]*)\[\[([^\[\]]+)\]\]([^\[\]]*)$/u) : null;
+    if (bracketed && bracketed[2].trim()) {
+        return { ...display, before: bracketed[1], label: bracketed[2], after: bracketed[3] };
     }
 
-    const hasCustomText = Boolean(normalized.before || normalized.after);
-
+    if (activeVariant) return display;
+    const hasCustomText = Boolean(display.before || display.after);
     if (!hasCustomText) {
-        return { ...normalized, before: 'the exit to ', after: ' is open' };
+        return { ...display, before: 'the exit to ', after: ' is open' };
     }
 
-    return normalized;
+    return display;
 }
 
 function isExitVisible(exitDefinition, from, destination) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.5.0
+
+- Support exit labels containing one `[[clickable span]]`, with surrounding prose in the same string.
+- Apply bracketed wording to ordinary exits and selected exit variants, taking precedence over `before`/`after` while preserving plain-label behavior.
+- Keep destinations, navigation and saves unchanged; verify browser link text and navigation.
+
 ## 3.4.0
 
 - Add room `imageFrom` maps for automatic arrival views without controller code.

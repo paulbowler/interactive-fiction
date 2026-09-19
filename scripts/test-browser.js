@@ -35,6 +35,8 @@ try {
     await fs.copyFile(path.join(project,'assets/study.svg'), path.join(project,'assets/study-from-hall.svg'));
     const worldFile=path.join(project,'data/game.json5');
     await fs.writeFile(worldFile,(await fs.readFile(worldFile,'utf8'))
+        .replace("before: 'a doorway leads to the ',", "label: 'Through the [[doorway]] lies the hall', before: 'ignored ', after: ' ignored',")
+        .replace('study: {},', "study: {label: '[[Study]] lies back through the doorway'},")
         .replace("name: 'Wooden Box',", "name: 'Wooden Box', unlockLabel: 'Release box latch',")
         .replace('clock: {', "endings: [{id: 'too-late', title: 'Too late', text: ['Dawn arrives.']}], clock: { startTime: '23:58', deadline: {time: '00:30', ending: 'too-late'},")
         .replace("name: 'Study',", "name: 'Study', imageFrom:{hall:'./assets/study-from-hall.svg'}, scenery:{mural:{name:'mural',title:'Mural',description:{default:'A faded mural.',examined:'A painted ship.'}}}, imageVariants: [{id:'duskIllustration', imageUrl:'./assets/study.svg', imagePosition:{x:'right',y:'bottom'}}],")
@@ -76,9 +78,13 @@ try {
         const {browserView} = await import(document.querySelector('script[type="module"]').src);
         if (!browserView.collectGameImageUrls(browserView.game.state).includes('./assets/study-from-hall.svg'))
             throw new Error('Arrival image missing from preload list');
-        browserView.game.dispatch({type:'go', target:'hall'});
-        browserView.game.dispatch({type:'go', target:'study'});
+
     });
+    assert.equal((await page.locator('#exits').textContent()).trim(), 'Through the doorway lies the hall.');
+    await page.locator('#exits').getByRole('button', {name: 'doorway', exact: true}).click();
+    assert.equal(await page.locator('#room-name').textContent(), 'Hall');
+    assert.equal((await page.locator('#exits').textContent()).trim(), 'Study lies back through the doorway.');
+    await page.locator('#exits').getByRole('button', {name: 'Study', exact: true}).click();
     await page.waitForFunction(() => document.querySelector('#room-image').getAttribute('src') === './assets/study-from-hall.svg');
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#room-image').getAttribute('src') === './assets/study-from-hall.svg');
